@@ -28,13 +28,20 @@ Build a Quizizz-like quiz web application for schools with two roles:
 | Echo | **v5.3.1** (requires Go ≥1.25) | latest stable; v4 is security-fix-only until 2026-12-31 |
 | MariaDB | **`mariadb:12`** (12.3 LTS) | already present locally; 13.0.2 exists but not local |
 | Bootstrap | **5.3.8** | vendored locally at `web/vendor/bootstrap/` — **no CDN** |
-| Realtime | **SSE (server→client) + POST JSON (client→server)** | native `EventSource`, no WebSocket library |
-| QR | `skip2/go-qrcode` | generates join-URL PNG |
-| Password hash | `golang.org/x/crypto/bcrypt` | |
-| DB driver | `github.com/go-sql-driver/mysql` | |
+| Realtime (client) | native `EventSource` | no WebSocket library |
+| **SSE server** | **`github.com/tmaxmax/go-sse`** (latest, active) | broker `Publish` per topic = per-quiz room, cross-topic dedup, server-only. Rejected: `r3labs/sse` (unmaintained since Jan 2023), `joshuafuller/sse/v3` (new fork, 0 importers — too risky) |
+| **.env loader** | **`github.com/ilyakaznacheev/cleanenv`** v0.5.0+ | parse `.env` + struct-tag mapping + **fail-fast required-field validation at boot**; OS env (Docker) wins over file. Rejected: `godotenv` (OS-set only, needs hand-written mapping), Viper (heavyweight) |
+| **CSV export** | **`github.com/gocarina/gocsv`** (latest, active Sep 2026) | struct → CSV via `csv:"..."` tags |
+| **XLSX export** | **`github.com/xuri/excelize/v2` ≥ v2.11.0 (MANDATORY)** | ⚠️ CVE-2026-59162 / GO-2026-6452 fixed in **v2.11.0**; **≤v2.10.1 is vulnerable** (panic on negative shared-string index). Pure Go, streaming writer for large sheets |
+| QR | `skip2/go-qrcode` (latest) | generates join-URL PNG |
+| Password hash | `golang.org/x/crypto/bcrypt` **≥ v0.55.0** | v0.55.0 (Aug 2026) includes CVE-2026-39833 fix |
+| DB driver | `github.com/go-sql-driver/mysql` **v1.10.0** (Aug 2026) | pure Go, no cgo |
 | Docker | 29.4.3 / Compose v5.1.3 | multi-stage: `golang:1.26.4-alpine` → `alpine:3.24` |
 
-**Dependency list is closed** — adding any dependency requires asking first (§10).
+**Closed dependency list — exactly 8 modules:**
+`labstack/echo/v5` · `go-sql-driver/mysql` · `golang.org/x/crypto` · `skip2/go-qrcode` · `tmaxmax/go-sse` · `ilyakaznacheev/cleanenv` · `gocarina/gocsv` · `xuri/excelize/v2`
+
+**Dependency list is closed** — adding any dependency requires asking first (§10). Minimum versions above are security floors: `go.mod` must pin ≥ those versions and `govulncheck ./...` must report no known vulnerabilities before release.
 
 ---
 
@@ -50,6 +57,9 @@ go test ./... -race -count=1
 # Lint
 go vet ./...
 
+# Vulnerability scan (required before release; enforces §2 security floors)
+go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./...
+
 # Dev / run (local == production)
 docker compose up --build          # → http://localhost:8080
 
@@ -64,12 +74,13 @@ docker compose up --build          # → http://localhost:8080
 quiz/
 ├── cmd/server/main.go          # entrypoint: config → db → migrate → routes → listen
 ├── internal/
-│   ├── config/                 # .env loader (GURU_USER, GURU_PASS, DSN, PORT)
+│   ├── config/                 # cleanenv: .env → struct (GURU_USER, GURU_PASS, DSN, PORT), fail-fast at boot
 │   ├── db/                     # MariaDB connection + embedded numbered migrations
 │   ├── models/                 # structs (User, Quiz, Question, Participant, Answer, ...)
 │   ├── handlers/               # auth/, teacher/, student/ — SSR render + JSON endpoints
 │   ├── middleware/             # authTeacher, authStudent, forceChangePW, session
-│   ├── realtime/               # SSE hub: rooms per quiz, snapshot-on-reconnect
+│   ├── realtime/               # SSE hub on tmaxmax/go-sse broker: one topic per quiz room,
+│   │                           #   snapshot-on-reconnect, slow-client drop policy
 │   ├── cache/                  # in-memory read-through mirror (per-entity TTL, write-through invalidation)
 │   └── quizengine/             # scoring, timers (clock-injectable), shuffle, ranking, anti-cheat
 ├── views/                      # html/template: layout/, teacher/, student/, partials/
@@ -226,7 +237,8 @@ password_resets id INT UNSIGNED AUTO_INCREMENT PK,
 ### 6.1 Realtime: SSE + POST JSON (approved approach A)
 - Server→client: SSE (`EventSource`, native auto-reconnect) — live monitor, ranking, anti-cheat alerts, waiting-room updates, start/stop broadcasts, correct-answer previews, force-stop.
 - Client→server: POST JSON for every non-SSR communication (answers, start, visibility events, actions).
-- No WebSocket library; no third-party realtime dependency.
+- **Server side runs on `tmaxmax/go-sse`**: its broker gives one topic per quiz room (teacher monitor + that quiz's students subscribe to the room topic; history/dashboard pages get their own topic), `Publish` fans out after commit, cross-topic dedup keeps a subscriber from receiving the same event twice. The `realtime/` package owns what the library doesn't: snapshot-on-reconnect, heartbeat, and the slow-client drop policy (§8).
+- No WebSocket library.
 
 ### 6.2 Persistence + mirror cache (approved)
 **Write order (inviolable):** `BEGIN → write DB → COMMIT → invalidate/update mirror → broadcast SSE`. If the DB write fails, **nothing is broadcast**.
@@ -312,7 +324,7 @@ nonaktif ──activate──▶ aktif ──close (modal if N working)──▶
 - Removed **while working**: snapshot `score_auto` first (unanswered = wrong) → status `dikeluarkan` → counted in results, history, **and ranking** with the removed flag.
 
 ### 6.11 Results & history
-- **Teacher results page:** participant list (name, final score, status: finished/removed/cheating, awaiting-grading), per-question analysis (% correct/wrong/unanswered, most-chosen option), CSV export (injection-guarded: values starting `=`/`+`/`-`/`@` get `'` prefix; empty results → header-only file).
+- **Teacher results page:** participant list (name, final score, status: finished/removed/cheating, awaiting-grading), per-question analysis (% correct/wrong/unanswered, most-chosen option). **Export in both CSV and XLSX** via `?format=csv|xlsx` (default `csv`): gocsv for CSV, excelize ≥v2.11.0 for XLSX (streaming writer). Both **injection-guarded**: values starting `=`/`+`/`-`/`@` get `'` prefix (CSV) / written as literal text cells, never formulas (XLSX); empty results → header-only file.
 - **Essay grading:** teacher opens student's essay answers → inputs scores → `final_score` finalized. Before grading: "awaiting grading".
 - **Student history:** all attempts listed; respects per-quiz settings: show/hide score, show/hide ranking, question review `none` / `text` (question + own answers + right/wrong marks, no key) / `full` (with answer key).
 - Ranking across attempts uses highest score.
@@ -375,10 +387,10 @@ GET  /teacher/quiz/:id/qr         PNG QR code of the join URL (join via QR)
 POST /teacher/quiz/:id/participants/:pid/action
                                     JSON: remove | cheat_toggle | approve | reject
 
-GET  /teacher/quiz/:id/results    list + per-question analysis + CSV export
+GET  /teacher/quiz/:id/results    list + per-question analysis + export buttons
 GET  /teacher/quiz/:id/grading    essay grading view
 POST /teacher/quiz/:id/grading/:aid save essay score → finalize final_score
-GET  /teacher/quiz/:id/results/export streaming CSV
+GET  /teacher/quiz/:id/results/export?format=csv|xlsx   streaming download (default csv)
 
 GET  /teacher/password-resets     pending reset requests
 POST /teacher/password-resets/:id/approve   → must_change_pw=1
@@ -449,7 +461,8 @@ HTTP: `400` validation · `401` unauthenticated · `403` role/locked · `404` mi
 
 **Anti-cheat & export**
 - Flood → 10 s collapse per kind; post-finish events ignored; toggle idempotent.
-- CSV injection guard; empty dataset → header-only file.
+- **CSV and XLSX** injection guard (CSV: `'` prefix; XLSX: string cells only, never formula cells — guard against `=`/`+`/`-`/`@` leading values); empty dataset → header-only file.
+- Unknown `?format=` → `400 VALIDATION` (never silently fall back).
 
 ---
 
@@ -486,7 +499,7 @@ HTTP: `400` validation · `401` unauthenticated · `403` role/locked · `404` mi
 | `realtime_test.go` | SSE event order, **snapshot rehydrate = new hub built from DB** (simulated restart), heartbeat, full buffer→disconnect, concurrent submits→single row |
 | `anticheat_test.go` | visibility POST → log + card + buttons visibility, flood collapse |
 | `riwayat_test.go` | settings matrix honored (score/ranking/review none-text-full) per attempt |
-| `export_test.go` | CSV content + injection guard |
+| `export_test.go` | CSV content + injection guard; XLSX content readable via excelize + string-cell guard; `?format=xlsx` valid, `?format=bogus` → 400; empty dataset → header-only both formats |
 
 **Determinism rules:** inject clock (no `time.Now` in logic), seeded RNG in tests, truncate relevant tables per test → safe to re-run and run sequentially.
 
@@ -503,7 +516,7 @@ HTTP: `400` validation · `401` unauthenticated · `403` role/locked · `404` mi
 - Validate all handler input (length, type, enum, numeric bounds) before querying.
 - Keep `go vet` + `go test ./... -race -count=1` green before every commit.
 - Numbered migrations in `migrations/`; keep schema in sync with §5 (living spec).
-- Stay within the closed dependency list: Echo v5, `go-sql-driver/mysql`, `skip2/go-qrcode`, `x/crypto`.
+- Stay within the closed 8-module list (§2): `echo/v5`, `go-sql-driver/mysql`, `x/crypto`, `skip2/go-qrcode`, `tmaxmax/go-sse`, `cleanenv`, `gocsv`, `excelize/v2` — and never below the security-floor versions in §2 (excelize ≥v2.11.0, x/crypto ≥v0.55.0).
 
 **Ask first:**
 - Database schema changes (columns, tables, indexes, ENUM values).
@@ -538,7 +551,7 @@ HTTP: `400` validation · `401` unauthenticated · `403` role/locked · `404` mi
 9. **Anti-cheat:** blur/minimize/switch/sleep → log + teacher notification → `Cheat` toggle + `Remove` (modal) appear **only** after a violation; both functional (toggle idempotent, remove modal-mandatory).
 10. **Student history** honors all setting combinations; every attempt shown; ranking = highest score; removed & cheating clearly flagged.
 11. **Essay grading:** teacher inputs scores → `final_score` finalized; before grading shows "awaiting grading".
-12. **Teacher results:** scores + flags + per-question analysis (% correct/wrong/unanswered, most-chosen option) + CSV export (injection-safe).
+12. **Teacher results:** scores + flags + per-question analysis (% correct/wrong/unanswered, most-chosen option) + export in **both CSV and XLSX** (injection-safe in both; `?format=xlsx` produces a file that excelize re-opens with correct cell values).
 13. **Live ranking ON** → shown on student screens **and** teacher monitor, updates on every answer.
 
 **Robustness:**
@@ -557,4 +570,4 @@ HTTP: `400` validation · `401` unauthenticated · `403` role/locked · `404` mi
 
 ## 12. Open Questions
 
-None — all 24 clarification decisions plus session strategy, persistence/mirror policy, UI language (English), palette (monochrome + controlled semantic), and testing scope are resolved in this document.
+None — all 24 clarification decisions plus session strategy, persistence/mirror policy, UI language (English), palette (monochrome + controlled semantic), testing scope, and the library selection (SSE broker / .env loader / CSV+XLSX export, §2) are resolved in this document.
