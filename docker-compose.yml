@@ -1,6 +1,7 @@
 services:
   app:
     build: .
+    image: ghcr.io/mochizzan/quizis:latest
     ports: ["8090:8090"]
     environment:
       DB_HOST: db          # absent from .env, so this survives cleanenv
