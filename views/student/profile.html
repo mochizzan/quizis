@@ -1,0 +1,52 @@
+{{define "page-student-profile"}}
+{{template "app_head" .}}
+  <header class="mb-4">
+    <p class="text-body-secondary small mb-1">Account</p>
+    <h1 class="h3 mb-0">Profile</h1>
+  </header>
+
+
+  <div class="row g-4">
+    <div class="col-12 col-md-6">
+      <form method="post" action="/profile/edit" class="card card-body vstack gap-3">
+        <div>
+          <label class="form-label" for="nama">Full name</label>
+          <input class="form-control" type="text" id="nama" name="nama" maxlength="100"
+                 value="{{.User.Nama}}" required>
+        </div>
+        <div>
+          <label class="form-label" for="kelas_id">Class</label>
+          <select class="form-select" id="kelas_id" name="kelas_id" required>
+            {{range .Kelas}}
+            <option value="{{.ID}}"{{if eq .ID $.User.KelasID}} selected{{end}}>{{.Nama}}</option>
+            {{end}}
+          </select>
+        </div>
+        <div>
+          <label class="form-label" for="jurusan_id">Major</label>
+          <select class="form-select" id="jurusan_id" name="jurusan_id" required>
+            {{range .Jurusan}}
+            <option value="{{.ID}}"{{if eq .ID $.User.JurusanID}} selected{{end}}>{{.Nama}}</option>
+            {{end}}
+          </select>
+        </div>
+        <div>
+          <button class="btn btn-primary" type="submit"><i class="bi bi-check2 me-2" aria-hidden="true"></i>Save profile</button>
+        </div>
+      </form>
+    </div>
+    <div class="col-12 col-md-6">
+      <div class="card card-body vstack gap-2">
+        <div>
+          <div class="text-body-secondary small">Username</div>
+          <div class="fw-semibold">{{.User.Username}}</div>
+        </div>
+        <div>
+          <div class="text-body-secondary small">Email</div>
+          <div class="fw-semibold">{{.User.Email}}</div>
+        </div>
+        <p class="text-body-secondary small mb-0">Username and email are fixed.</p>
+      </div>
+    </div>
+  </div>
+{{template "app_foot" .}}{{end}}

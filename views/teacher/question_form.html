@@ -1,0 +1,408 @@
+{{define "question-form"}}
+{{- /* Shared create/edit form for the question bank, rendered by both
+       /teacher/questions/new and /teacher/questions/:id/edit. The action
+       comes from the page (FormAction); on success teacher.js follows
+       data-next back to the read-only list with the stored success toast.
+       The edit page hydrates option rows from the server-rendered
+       data-options/data-correct JSON; the new page seeds two blank rows. */ -}}
+<form action="{{.FormAction}}" method="post" data-fetch data-success="Question saved successfully." data-next="/teacher/questions"
+      id="qform" data-options="{{.Q.Options}}" data-correct="{{.Q.Correct}}">
+  <div class="mb-3">
+    <label class="form-label" for="teks">Question text</label>
+    <textarea class="form-control" id="teks" name="teks" rows="2" required>{{.Q.Teks}}</textarea>
+  </div>
+  {{if not .Q.ID}}
+  <div class="mb-3" data-qimage>
+    <label class="form-label" for="qimage">Question image <span class="text-body-secondary">(optional)</span></label>
+    <input class="form-control" type="file" id="qimage" accept="image/png,image/jpeg,image/gif,image/webp" data-qimage-input>
+    <div class="progress mt-2 d-none" data-qimage-bar><div class="progress-bar" role="progressbar" style="width:0%" aria-valuemin="0" aria-valuemax="100"></div></div>
+    <small class="text-body-secondary d-block d-none mt-1" data-qimage-status hidden></small>
+    <div class="mt-2 d-none" data-qimage-preview>
+      <img class="img-fluid rounded" alt="Question image preview" style="max-height:200px;">
+      <button type="button" class="btn btn-sm btn-outline-danger ms-2" data-qimage-remove title="Remove image" aria-label="Remove image"><i class="bi bi-trash" aria-hidden="true"></i></button>
+    </div>
+    <input type="hidden" name="image" value="" data-qimage-ref>
+  </div>
+  {{end}}
+  <div class="mb-3">
+    <label class="form-label" for="type">Type</label>
+    <select class="form-select" id="type" name="type">
+      <option value="pg" {{if eq .Q.Type "pg"}}selected{{end}}>Single choice</option>
+      <option value="multi" {{if eq .Q.Type "multi"}}selected{{end}}>Multiple choice</option>
+      <option value="essay" {{if eq .Q.Type "essay"}}selected{{end}}>Essay</option>
+    </select>
+  </div>
+  <div class="mb-3" id="choice-block">
+    <label class="form-label">Options <span class="text-body-secondary">(tick the correct one)</span></label>
+    <div id="opt-list"></div>
+    <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="add-opt"
+            title="Add option" aria-label="Add option" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-plus-lg" aria-hidden="true"></i></button>
+  </div>
+  <div class="mb-3 d-none" id="essay-block">
+    <label class="form-label" for="essay_key">Answer key (optional — essays are graded by the teacher)</label>
+    <input class="form-control" id="essay_key" name="essay_key">
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary" type="submit"><i class="bi {{if .Q.ID}}bi-check2{{else}}bi-plus-lg{{end}} me-1" aria-hidden="true"></i>{{if .Q.ID}}Save question{{else}}Add question{{end}}</button>
+    <a class="btn btn-outline-secondary" href="/teacher/questions"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Cancel</a>
+  </div>
+</form>
+<script>
+(function () {
+  var form = document.getElementById("qform");
+  var typeSel = document.getElementById("type");
+  var choiceBlock = document.getElementById("choice-block");
+  var essayBlock = document.getElementById("essay-block");
+  var optList = document.getElementById("opt-list");
+
+  function syncType() {
+    var essay = typeSel.value === "essay";
+    choiceBlock.classList.toggle("d-none", essay);
+    essayBlock.classList.toggle("d-none", !essay);
+  }
+
+  function pickerType() {
+    return typeSel.value === "pg" ? "radio" : "checkbox";
+  }
+
+  function createPicker(type, value) {
+    var p = document.createElement("input");
+    p.className = "form-check-input mt-0";
+    p.type = type;
+    p.name = "correct[]";
+    p.value = value;
+    p.setAttribute("aria-label", "Correct answer");
+    return p;
+  }
+
+  // Clear every correct selection and convert pickers to the type the
+  // currently selected question type needs (radio for pg, checkbox otherwise).
+  // Option text inputs are left untouched.
+  function syncPickers() {
+    var want = pickerType();
+    optList.querySelectorAll('input[name="correct[]"]').forEach(function (p) {
+      p.checked = false;
+      if (p.type === want) return;
+      var fresh = createPicker(want, p.value);
+      p.parentNode.replaceChild(fresh, p);
+    });
+  }
+
+  function renumber() {
+    optList.querySelectorAll('input[name="correct[]"]').forEach(function (cb, i) {
+      cb.value = String(i);
+    });
+  }
+
+  function addOptionRow(value) {
+    var row = document.createElement("div");
+    row.className = "input-group mb-2";
+    var input = document.createElement("input");
+    input.className = "form-control";
+    input.name = "options[]";
+    input.placeholder = "Option";
+    input.value = value || "";
+    var mark = document.createElement("div");
+    mark.className = "input-group-text";
+    mark.appendChild(createPicker(pickerType(), "0"));
+    var rm = document.createElement("button");
+    rm.type = "button";
+    rm.className = "btn btn-outline-danger";
+    var rmi = document.createElement("i");
+    rmi.className = "bi bi-x";
+    rmi.setAttribute("aria-hidden", "true");
+    rm.appendChild(rmi);
+    rm.title = "Remove option";
+    rm.setAttribute("aria-label", "Remove option");
+    rm.setAttribute("data-bs-toggle", "tooltip");
+    rm.setAttribute("data-bs-placement", "bottom");
+    rm.addEventListener("click", function () {
+      row.remove();
+      renumber();
+    });
+    row.appendChild(input);
+    row.appendChild(mark);
+    row.appendChild(rm);
+    optList.appendChild(row);
+    if (window.quizTooltips) quizTooltips(row);
+    renumber();
+  }
+
+  document.getElementById("add-opt").addEventListener("click", function () {
+    addOptionRow("");
+  });
+  typeSel.addEventListener("change", function () {
+    syncPickers();
+    syncType();
+  });
+
+  // Client-side validation, attached to the form itself so it runs before the
+  // document-level data-fetch submit handler; stopPropagation keeps invalid
+  // submits off the network.
+  form.addEventListener("submit", function (ev) {
+    var type = typeSel.value;
+    if (type === "essay") return;
+    function reject(msg) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      window.quizToast("danger", msg);
+    }
+    var checked = 0;
+    optList.querySelectorAll('input[name="correct[]"]').forEach(function (p) {
+      if (p.checked) checked++;
+    });
+    if (type === "pg" && checked !== 1) {
+      reject("Pilih satu jawaban benar.");
+      return;
+    }
+    if (type === "multi" && checked < 1) {
+      reject("Pilih minimal satu jawaban benar.");
+      return;
+    }
+    var opts = optList.querySelectorAll('input[name="options[]"]');
+    var optionsValid = opts.length >= 2;
+    opts.forEach(function (o) {
+      if (!o.value.trim()) optionsValid = false;
+    });
+    if (!optionsValid) reject("Isi minimal dua opsi jawaban tanpa kosong.");
+  });
+
+  // Hydration: the edit page rides the stored JSON in data-options /
+  // data-correct (server-rendered from the DB); the new page has neither and
+  // seeds two blank option rows.
+  var opts = [];
+  var correct = [];
+  try { opts = JSON.parse(form.dataset.options || "[]"); } catch (e) {}
+  try { correct = JSON.parse(form.dataset.correct || "null"); } catch (e) {}
+  if (!Array.isArray(correct)) correct = correct === null || correct === undefined ? [] : [correct];
+  if (!opts.length) opts = ["", ""];
+  opts.forEach(function (o) { addOptionRow(o); });
+  optList.querySelectorAll('input[name="correct[]"]').forEach(function (cb) {
+    cb.checked = correct.indexOf(parseInt(cb.value, 10)) >= 0;
+  });
+  if (typeSel.value === "essay" && form.dataset.correct) {
+    document.getElementById("essay_key").value = JSON.parse(form.dataset.correct);
+  }
+  syncType();
+})();
+</script>
+{{if not .Q.ID}}
+<script>
+(function () {
+  "use strict";
+  // Chunked question-image upload — NEW question only (the markup above is
+  // template-guarded too; this no-ops when the data-qimage hooks are absent).
+  // UI sequencing only — every size/MIME/limit rule stays server-side: hash
+  // the picked file, initiate the upload, stream 1 MiB chunks over XHR (so
+  // upload progress drives the bar), then complete, which parks data.path in
+  // the hidden image input riding the normal multipart submit (teacher.js
+  // runFetch). Failures surface through quizToast only.
+  var wrap = document.querySelector("[data-qimage]");
+  var form = document.getElementById("qform");
+  if (!wrap || !form) return;
+  var fileInput = wrap.querySelector("[data-qimage-input]");
+  var bar = wrap.querySelector("[data-qimage-bar]");
+  var barFill = bar.querySelector(".progress-bar");
+  var status = wrap.querySelector("[data-qimage-status]");
+  var preview = wrap.querySelector("[data-qimage-preview]");
+  var previewImg = preview.querySelector("img");
+  var removeBtn = wrap.querySelector("[data-qimage-remove]");
+  var ref = wrap.querySelector("[data-qimage-ref]");
+  var busy = false;
+  var previewURL = "";
+
+  function toast(message) {
+    if (window.quizToast) quizToast("danger", message || "Request failed. Please try again.");
+  }
+
+  function setBusy(on) {
+    busy = on;
+    fileInput.disabled = on;
+    removeBtn.disabled = on;
+  }
+
+  function showStatus(text) {
+    status.textContent = text;
+    status.hidden = false;
+    status.classList.remove("d-none");
+  }
+
+  function hideStatus() {
+    status.textContent = "";
+    status.hidden = true;
+    status.classList.add("d-none");
+  }
+
+  function setBar(pct, tone) {
+    bar.classList.remove("d-none");
+    barFill.style.width = pct + "%";
+    barFill.classList.toggle("text-bg-success", tone === "success");
+  }
+
+  function hideBar() {
+    bar.classList.add("d-none");
+    barFill.style.width = "0%";
+    barFill.classList.remove("text-bg-success");
+  }
+
+  // Minimal runFetch-shaped envelope helper: the server answers
+  // {"ok":true,"data":…} or {"ok":false,"error":CODE,"message":…}; an
+  // unparsable body comes back as an empty object, so callers only ever
+  // branch on body.ok / body.message.
+  function postJSON(url, payload) {
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).then(function (resp) {
+      return resp.json().catch(function () { return {}; });
+    }).then(function (body) {
+      return body || {};
+    });
+  }
+
+  // The upload id is the directory segment of data.path (the delete route
+  // mirrors /teacher/uploads/<id>/…): prefer the segment after "uploads",
+  // otherwise the last directory above a trailing file name.
+  function uploadIdFrom(path) {
+    var parts = String(path).split("/").filter(function (s) { return s; });
+    for (var i = parts.length - 1; i >= 0; i--) {
+      if (parts[i] === "uploads" && i + 1 < parts.length) return parts[i + 1];
+    }
+    var last = parts[parts.length - 1] || "";
+    if (last.indexOf(".") >= 0 && parts.length > 1) return parts[parts.length - 2];
+    return last;
+  }
+
+  // Best-effort delete of a stored upload — fire-and-forget, errors ignored
+  // (nothing to recover client-side).
+  function deleteUpload(path) {
+    var id = uploadIdFrom(path);
+    if (!id) return;
+    fetch("/teacher/uploads/" + encodeURIComponent(id) + "/delete", { method: "POST" })
+      .catch(function () {});
+  }
+
+  // reset returns the component to a clean, retryable state. keepFile leaves
+  // the freshly picked file in the input (replacement flow); otherwise the
+  // input is cleared too, so re-picking the same file fires change again.
+  function reset(keepFile) {
+    setBusy(false);
+    if (previewURL) {
+      URL.revokeObjectURL(previewURL);
+      previewURL = "";
+    }
+    if (ref.value) deleteUpload(ref.value);
+    ref.value = "";
+    if (!keepFile) fileInput.value = "";
+    preview.classList.add("d-none");
+    previewImg.removeAttribute("src");
+    hideStatus();
+    hideBar();
+  }
+
+  // One XHR per chunk — fetch has no upload progress. Resolves with the
+  // envelope so the caller can toast body.message and stop the sequence.
+  function sendChunk(id, index, blob, sentBefore, totalSize, onProgress) {
+    return new Promise(function (resolve) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "/teacher/uploads/" + encodeURIComponent(id) + "/chunks/" + index);
+      xhr.setRequestHeader("Content-Type", "application/octet-stream");
+      xhr.upload.onprogress = function (e) {
+        if (e.lengthComputable) onProgress((sentBefore + e.loaded) / totalSize * 100);
+      };
+      xhr.onload = function () {
+        var body = {};
+        try { body = JSON.parse(xhr.responseText) || {}; } catch (e) { body = {}; }
+        resolve({
+          ok: xhr.status >= 200 && xhr.status < 300 && body.ok === true,
+          message: body.message
+        });
+      };
+      xhr.onerror = function () {
+        resolve({ ok: false, message: "Network error — please try again." });
+      };
+      xhr.send(blob);
+    });
+  }
+
+  async function upload(file) {
+    setBusy(true);
+    showStatus("Preparing image…");
+    setBar(0);
+    try {
+      const buf = await file.arrayBuffer();
+      const hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", buf))].map(b => b.toString(16).padStart(2, "0")).join("");
+      var total = Math.max(1, Math.ceil(file.size / 1048576));
+      var body = await postJSON("/teacher/uploads", {
+        total: total,
+        size: file.size,
+        sha256: hash
+      });
+      if (!body.ok || !body.data || !body.data.upload_id) {
+        toast(body.message);
+        reset(false);
+        return;
+      }
+      var id = body.data.upload_id;
+      var cs = body.data.chunk_size || 1048576;
+      for (var i = 0; i < total; i++) {
+        showStatus("Uploading chunk " + (i + 1) + " of " + total + "…");
+        var start = i * cs;
+        var result = await sendChunk(id, i, file.slice(start, Math.min((i + 1) * cs, file.size)), start, file.size, function (pct) {
+          setBar(pct);
+        });
+        if (!result.ok) {
+          toast(result.message);
+          reset(false);
+          return;
+        }
+        showStatus("Uploaded chunk " + (i + 1) + " of " + total + ".");
+      }
+      var done = await postJSON("/teacher/uploads/" + encodeURIComponent(id) + "/complete", {});
+      if (!done.ok || !done.data || !done.data.path) {
+        toast(done.message);
+        reset(false);
+        return;
+      }
+      ref.value = done.data.path;
+      previewURL = URL.createObjectURL(file);
+      previewImg.src = previewURL;
+      preview.classList.remove("d-none");
+      showStatus("Image uploaded.");
+      setBar(100, "success");
+      setBusy(false);
+    } catch (e) {
+      toast("Network error — please try again.");
+      reset(false);
+    }
+  }
+
+  fileInput.addEventListener("change", function () {
+    if (busy) return;
+    var file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    reset(true); // a new selection replaces the previous upload
+    upload(file);
+  });
+
+  removeBtn.addEventListener("click", function () {
+    if (busy) return;
+    reset(false);
+  });
+
+  // Sequencing guard, not validation: a picked file whose upload has not
+  // finished yet must not ride the submit — the hidden ref stays empty until
+  // complete answers. This form-level listener fires while the event
+  // bubbles, i.e. BEFORE teacher.js's document-level data-fetch handler.
+  form.addEventListener("submit", function (ev) {
+    if (fileInput.files && fileInput.files.length && !ref.value) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      toast("The image is still uploading — wait for it to finish or remove it.");
+    }
+  });
+})();
+</script>
+{{end}}
+{{end}}

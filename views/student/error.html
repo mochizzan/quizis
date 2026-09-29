@@ -1,0 +1,7 @@
+{{define "page-student-error"}}{{template "head" .}}
+<div class="text-center py-5">
+  <h1 class="h4">{{.Heading}}</h1>
+  <p class="text-body-secondary">{{.Message}}</p>
+  <a class="btn btn-outline-secondary mt-3" href="/student"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>Back to dashboard</a>
+</div>
+{{template "foot" .}}{{end}}

@@ -1,0 +1,13 @@
+{{define "crumb-nav"}}{{if .Crumbs}}
+{{- /* Route hierarchy on every dashboard page (Bootstrap breadcrumb): each
+       parent links to its own route or is a static label — the root
+       "Dashboard" crumb never navigates to "/" — and only the last crumb is
+       the current page (.active + aria-current="page"). */ -}}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb mb-0">
+    {{$last := sub (len .Crumbs) 1}}{{range $i, $c := .Crumbs}}{{$current := and (not $c.URL) (eq $i $last)}}
+    <li class="breadcrumb-item{{if $current}} active{{end}}"{{if $current}} aria-current="page"{{end}}>{{if $c.URL}}<a href="{{$c.URL}}">{{$c.Label}}</a>{{else}}{{$c.Label}}{{end}}</li>
+    {{end}}
+  </ol>
+</nav>
+{{end}}{{end}}

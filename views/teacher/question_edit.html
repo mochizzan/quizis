@@ -1,0 +1,9 @@
+{{define "page-teacher-question-edit"}}{{template "app_head" .}}
+<h1 class="h4 mb-3">Edit question</h1>
+<div class="card">
+  <div class="card-body">
+    {{template "question-form" .}}
+  </div>
+</div>
+<script src="{{asset "/js/teacher.js"}}"></script>
+{{template "app_foot" .}}{{end}}

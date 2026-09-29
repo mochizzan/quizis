@@ -1,0 +1,24 @@
+{{define "profile-link"}}
+{{- /* Icon-only identity control — Bootstrap Tooltip (title + aria-label);
+       target follows the session role: anonymous → /login (Sign in),
+       murid → /student, guru → /teacher. */ -}}
+{{if eq .Role "guru"}}
+<a class="btn btn-sm btn-outline-secondary rounded-circle" href="/teacher"
+   aria-label="Dashboard guru" title="Dashboard guru"
+   data-bs-toggle="tooltip" data-bs-placement="bottom">
+  <i class="bi bi-person" aria-hidden="true"></i>
+</a>
+{{else if eq .Role "murid"}}
+<a class="btn btn-sm btn-outline-secondary rounded-circle" href="/student"
+   aria-label="Dashboard murid" title="Dashboard murid"
+   data-bs-toggle="tooltip" data-bs-placement="bottom">
+  <i class="bi bi-person" aria-hidden="true"></i>
+</a>
+{{else}}
+<a class="btn btn-sm btn-outline-secondary rounded-circle" href="/login"
+   aria-label="Sign in" title="Sign in"
+   data-bs-toggle="tooltip" data-bs-placement="bottom">
+  <i class="bi bi-person" aria-hidden="true"></i>
+</a>
+{{end}}
+{{end}}

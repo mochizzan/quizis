@@ -1,0 +1,43 @@
+{{define "app_head"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{with .Title}}{{.}} — {{end}}Quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Cypro+Minoan&display=swap">
+<link rel="stylesheet" href="{{asset "/bootstrap/css/bootstrap.min.css"}}">
+<link rel="stylesheet" href="{{asset "/assets/bootstrap-icons/bootstrap-icons.css"}}">
+<link rel="stylesheet" href="{{asset "/assets/theme.css"}}">
+<link rel="stylesheet" href="{{asset "/css/app.css"}}">
+<script>try{var t=localStorage.getItem("theme");if(t){document.documentElement.setAttribute("data-bs-theme",t);}}catch(e){}</script>
+<script src="{{asset "/js/theme.js"}}" defer></script>
+<script src="{{asset "/js/ui.js"}}" defer></script>
+</head>
+<body>
+{{template "feedback-toasts" .}}
+{{template "confirm-modal" .}}
+<div class="app-shell">
+{{template "app_nav" .}}
+<div class="app-main">
+<header class="app-topbar">
+  <button class="btn btn-sm btn-outline-secondary d-lg-none" type="button"
+          data-bs-toggle="offcanvas" data-bs-target="#app-sidebar"
+          aria-controls="app-sidebar" aria-label="Open menu"
+          title="Open menu" data-quiz-tooltip data-bs-placement="bottom">
+    <i class="bi bi-list" aria-hidden="true"></i>
+  </button>
+  {{- /* Role-aware brand: the app shell links the role dashboard, never the
+         landing page ("/"); an unknown role renders a non-link (fail closed). */}}
+  <a class="app-topbar-brand d-lg-none"{{if eq .Role "guru"}} href="/teacher"{{else if eq .Role "murid"}} href="/student"{{end}}>Quiz</a>
+  <div class="ms-auto d-flex align-items-center gap-2">
+    <button type="button" class="btn btn-sm btn-outline-secondary" data-theme-toggle
+            title="Toggle theme" aria-label="Toggle theme"
+            data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-circle-half" aria-hidden="true"></i></button>
+    {{template "profile-link" .}}
+  </div>
+</header>
+<main class="app-content">
+{{template "crumb-nav" .}}
+{{end}}

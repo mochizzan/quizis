@@ -1,0 +1,146 @@
+{{define "page-student-workspace"}}{{template "head" .}}
+<div id="workspace" data-state="{{.State}}" data-code="{{.Code}}"{{if .Linear}} data-linear="true"{{end}}>
+
+  <header class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+    <div>
+      <h1 class="h4 mb-1">{{.Judul}}</h1>
+      {{if .Deskripsi}}<p class="text-body-secondary mb-1">{{.Deskripsi}}</p>{{end}}
+      <p class="text-body-secondary small mb-0">Join code <code>{{.Code}}</code></p>
+    </div>
+    {{if eq .State "started"}}
+    <div id="timer" class="{{if not .TimerOn}}d-none{{end}} text-end">
+      <span class="text-body-secondary small">Time left</span>
+      <div class="fs-5 fw-semibold" id="timer-value">&mdash;:__</div>
+    </div>
+    {{end}}
+  </header>
+
+  {{if eq .State "pending"}}
+  <div class="alert alert-secondary" role="status">
+    <h2 class="h6 alert-heading">Waiting for approval</h2>
+    <p class="mb-0">Your teacher has to approve your entry. This page updates on its own.</p>
+  </div>
+
+  {{else if eq .State "waiting"}}
+  <div class="alert alert-secondary" role="status">
+    <h2 class="h6 alert-heading">Waiting for the teacher</h2>
+    <p class="mb-0">The quiz has not started yet. This page updates on its own.</p>
+  </div>
+
+  {{else if eq .State "ready"}}
+  <div class="card p-4 text-center">
+    <p class="text-body-secondary mb-3">You are in. Start when you are ready &mdash; the timer begins immediately.</p>
+    <form id="start-form" method="post" action="{{.StartURL}}">
+      <button class="btn btn-primary" type="submit"><i class="bi bi-play-btn me-2" aria-hidden="true"></i>Start quiz</button>
+    </form>
+  </div>
+
+  {{else if eq .State "started"}}
+  <div id="questions">
+    {{$total := .Total}}
+    {{range .Questions}}
+    {{$q := .}}
+    <section class="ws-question card p-3 mb-3" data-qid="{{.ID}}" data-index="{{.Index}}" data-type="{{.Type}}"{{if ne (add .Index 1) $.Current}} hidden{{end}}>
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="fw-semibold">Question {{add .Index 1}} of {{$total}}</span>
+        <span class="badge text-bg-secondary" data-q-status{{if not .Answered}} hidden{{end}}>Answered</span>
+      </div>
+      <p class="mb-3" style="white-space: pre-wrap;">{{.Teks}}</p>
+      {{if .ImageURL}}<img src="{{.ImageURL}}" alt="Question image" class="img-fluid d-block mb-3" loading="lazy">{{end}}
+
+      {{if eq .Type "essay"}}
+      <label class="form-label visually-hidden" for="essay_{{.ID}}">Your answer</label>
+      <textarea class="form-control" id="essay_{{.ID}}" rows="4" placeholder="Type your answer"></textarea>
+      {{else}}
+        {{range .Options}}
+        <div class="form-check">
+          <input class="form-check-input" type="{{if eq $q.Type "multi"}}checkbox{{else}}radio{{end}}"
+                 name="q_{{$q.ID}}" id="o_{{$q.ID}}_{{.Original}}" value="{{.Original}}">
+          <label class="form-check-label" for="o_{{$q.ID}}_{{.Original}}">{{.Letter}}. {{.Text}}</label>
+        </div>
+        {{end}}
+      {{end}}
+      <div class="mt-2 small" data-preview></div>
+    </section>
+    {{end}}
+  </div>
+
+  <div class="d-flex gap-2 flex-wrap align-items-center" id="ws-pager">
+    <button type="button" id="btn-prev" class="btn btn-outline-secondary{{if le $.Current 1}} disabled{{end}}"{{if $.Linear}} hidden{{end}}{{if le $.Current 1}} disabled{{end}} title="Previous" aria-label="Previous" data-bs-toggle="tooltip"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+    <button type="button" id="btn-next" class="btn btn-outline-secondary{{if ge $.Current $.Total}} disabled{{end}}"{{if $.Linear}} hidden{{end}}{{if ge $.Current $.Total}} disabled{{end}} title="Next" aria-label="Next" data-bs-toggle="tooltip"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+  </div>
+
+  <!-- pre-submit review (spec §6.7): one box per question — green answered,
+       red not answered — so the murid checks everything before submitting -->
+  <section id="ws-preview" class="card p-3 mb-3" hidden>
+    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+      <h2 class="h5 mb-0"><i class="bi bi-grid-3x3-gap me-2" aria-hidden="true"></i>Review before submit</h2>
+      <span class="text-body-secondary small" id="preview-summary"></span>
+    </div>
+    <p class="text-body-secondary small mb-2">Green = answered &middot; red = not answered yet.</p>
+    <div id="preview-grid" class="d-flex flex-wrap gap-2"></div>
+    <div class="d-flex gap-2 mt-3">
+      <button type="button" id="btn-preview-back" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back to questions</button>
+      <button type="button" id="btn-preview-submit" class="btn btn-primary ms-auto"><i class="bi bi-send me-1" aria-hidden="true"></i>Submit quiz</button>
+    </div>
+  </section>
+
+  <aside id="rank-panel" class="mt-4"{{if not .Ranking}} hidden{{end}}>
+    <h2 class="h6">Live ranking</h2>
+    <ol class="list-group list-group-numbered" id="rank-list">
+      {{range .Ranking}}
+      <li class="list-group-item d-flex justify-content-between align-items-center{{if .Me}} active{{end}}">
+        <span>{{.Name}}{{if .Cheating}} &middot; flagged{{end}}</span>
+        <span class="fw-semibold">{{.ScoreText}}</span>
+      </li>
+      {{end}}
+    </ol>
+  </aside>
+
+  {{else if eq .State "finished"}}
+  <div class="card p-4 text-center">
+    <h2 class="h5">Attempt finished</h2>
+    {{if .NotAttempted}}
+    <p class="text-body-secondary mb-0">You did not submit this attempt before the quiz closed.</p>
+    {{else}}
+      {{if .Pending}}<p class="text-body-secondary mb-0">Waiting for your teacher to grade the essay questions.</p>{{end}}
+      {{if .ShowScore}}
+        {{if .FinalText}}<p class="display-6 mb-1">{{.FinalText}}<span class="fs-6 text-body-secondary"> / 100</span></p>{{end}}
+        {{if .AutoText}}<p class="text-body-secondary small mb-0">Auto-graded score: {{.AutoText}}</p>{{end}}
+      {{else}}
+      <p class="text-body-secondary mb-0">The final score is not shown for this quiz.</p>
+      {{end}}
+      {{if .Cheating}}<p class="text-danger small mb-0">Your teacher flagged this attempt for leaving the quiz window.</p>{{end}}
+    {{end}}
+    <a class="btn btn-outline-secondary mt-3" href="/student"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>Back to dashboard</a>
+  </div>
+  {{end}}
+
+</div>
+
+{{if .WSData}}<script type="application/json" id="ws-data">{{.WSData}}</script>{{end}}
+{{if eq .State "started"}}
+<!-- Teacher flagged this attempt (spec §6.9 — no lockout): static markup,
+     shown by workspace.js through bootstrap.Modal — never the native dialogs. -->
+<div class="modal fade" id="flagged-modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="flagged-modal-title" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5" id="flagged-modal-title"><i class="bi bi-exclamation-triangle-fill text-warning me-2" aria-hidden="true"></i>Marked as cheating</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Your teacher flagged this attempt as cheating from the live monitor.</p>
+        <p class="mb-0">The flag is recorded with your attempt and your teacher sees it in the results. It does not lock you out &mdash; you can keep working on the quiz.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal"><i class="bi bi-check-lg me-1" aria-hidden="true"></i>Continue quiz</button>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
+{{template "confirm-modal" .}}
+<script src="{{asset "/js/anti-cheat.js"}}" defer></script>
+<script src="{{asset "/js/workspace.js"}}" defer></script>
+{{template "foot" .}}{{end}}

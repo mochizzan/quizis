@@ -1,0 +1,8 @@
+{{define "page-join"}}{{template "landing_head" .}}
+<div class="container py-5">
+  {{- /* Public join page: the code form and nothing else — an anonymous
+         page may never list active quizzes (name, code, participants). */ -}}
+  {{template "join-panel" .}}
+</div>
+{{template "site-footer" .}}
+{{template "foot" .}}{{end}}

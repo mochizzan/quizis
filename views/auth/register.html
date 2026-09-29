@@ -1,0 +1,50 @@
+{{define "page-register"}}{{template "head" .}}
+<div class="row justify-content-center">
+  <div class="col-sm-10 col-md-7 col-lg-5">
+    <div class="card">
+      <div class="card-body p-4">
+        <h1 class="h5 mb-3">Register</h1>
+        <form action="/register" method="post">
+          <div class="mb-3">
+            <label class="form-label" for="nama_lengkap">Full name</label>
+            <input class="form-control" id="nama_lengkap" name="nama_lengkap" value="{{.Nama}}" required>
+          </div>
+          <div class="row">
+            <div class="col-sm-6 mb-3">
+              <label class="form-label" for="username">Username</label>
+              <input class="form-control" id="username" name="username" value="{{.Username}}" autocomplete="username" required>
+            </div>
+            <div class="col-sm-6 mb-3">
+              <label class="form-label" for="email">Email</label>
+              <input class="form-control" id="email" name="email" type="email" value="{{.Email}}" autocomplete="email" required>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="password">Password</label>
+            <input class="form-control" id="password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+            <div class="form-text">At least 8 characters.</div>
+          </div>
+          <div class="row">
+            <div class="col-sm-6 mb-3">
+              <label class="form-label" for="kelas_id">Class</label>
+              <select class="form-select" id="kelas_id" name="kelas_id" required>
+                {{range .Classes}}<option value="{{.ID}}">{{.Nama}}</option>{{end}}
+              </select>
+            </div>
+            <div class="col-sm-6 mb-3">
+              <label class="form-label" for="jurusan_id">Major</label>
+              <select class="form-select" id="jurusan_id" name="jurusan_id" required>
+                {{range .Majors}}<option value="{{.ID}}">{{.Nama}}</option>{{end}}
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary w-100" type="submit"><i class="bi bi-person-plus me-2" aria-hidden="true"></i>Create account</button>
+        </form>
+        <div class="mt-3">
+          <a href="/login">Sign in</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{template "foot" .}}{{end}}

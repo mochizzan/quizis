@@ -1,0 +1,45 @@
+{{define "page-teacher-results-analysis"}}
+{{template "app_head" .}}
+  <header class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+    <div>
+      <p class="text-body-secondary small mb-1">Question analysis</p>
+      <h1 class="h3 mb-0">{{.Judul}}</h1>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a class="btn btn-outline-secondary" href="/teacher/quiz/{{.ID}}"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>Back to quiz</a>
+      <a class="btn btn-outline-secondary" href="/teacher/quiz/{{.ID}}/results/export?format=csv" title="Download CSV" aria-label="Download CSV" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-filetype-csv" aria-hidden="true"></i></a>
+      <a class="btn btn-outline-secondary" href="/teacher/quiz/{{.ID}}/results/export?format=xlsx" title="Download XLSX" aria-label="Download XLSX" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-filetype-xlsx" aria-hidden="true"></i></a>
+    </div>
+  </header>
+
+  {{template "results-tabs" (dict "ID" .ID "Active" "analysis")}}
+
+  <section>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>#</th><th>Question</th>
+            <th class="text-end">Correct</th><th class="text-end">Wrong</th>
+            <th class="text-end">Unanswered</th><th>Most chosen</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Stats}}
+          <tr>
+            <td>{{.Seq}}</td>
+            <td class="text-break">{{.Text}}</td>
+            <td class="text-end">{{printf "%.0f" .CorrectPct}}%</td>
+            <td class="text-end">{{printf "%.0f" .WrongPct}}%</td>
+            <td class="text-end">{{printf "%.0f" .MissPct}}%</td>
+            <td>{{.MostChosen}}</td>
+          </tr>
+          {{else}}
+          <tr><td colspan="6" class="text-body-secondary">No questions yet.</td></tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </section>
+<script src="{{asset "/js/teacher.js"}}"></script>
+{{template "app_foot" .}}{{end}}

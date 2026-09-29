@@ -1,0 +1,15 @@
+{{define "results-tabs"}}
+{{- /* Results navigation: the students/answer table and the per-question
+       analysis are separate ROUTES, not one page — the analysis query only
+       runs when its route is opened. Shared by both pages, so the two views
+       can never drift apart. Active picks the current one ("students" |
+       "analysis"). */ -}}
+<ul class="nav nav-tabs mb-3" aria-label="Results views">
+  <li class="nav-item">
+    <a class="nav-link{{if eq .Active "students"}} active{{end}}" href="/teacher/quiz/{{.ID}}/results"{{if eq .Active "students"}} aria-current="page"{{end}}><i class="bi bi-people me-2" aria-hidden="true"></i>Students</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link{{if eq .Active "analysis"}} active{{end}}" href="/teacher/quiz/{{.ID}}/results/analysis"{{if eq .Active "analysis"}} aria-current="page"{{end}}><i class="bi bi-bar-chart-line me-2" aria-hidden="true"></i>Question analysis</a>
+  </li>
+</ul>
+{{end}}

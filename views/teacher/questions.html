@@ -1,0 +1,53 @@
+{{define "page-teacher-questions"}}{{template "app_head" .}}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h1 class="h4 mb-0">Question bank</h1>
+  <a class="btn btn-primary" href="/teacher/questions/new"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Add question</a>
+</div>
+{{template "table-toolbar" .}}
+<div class="btn-group btn-group-sm mb-3" role="group" aria-label="Filter by question length">
+  <a class="btn {{if eq .Length ""}}btn-primary{{else}}btn-outline-primary{{end}}" href="{{.Table.Action}}{{if $.Table.Q}}?q={{urlquery $.Table.Q}}{{end}}">All lengths</a>
+  <a class="btn {{if eq .Length "short"}}btn-primary{{else}}btn-outline-primary{{end}}" href="{{.Table.Action}}?length=short{{if $.Table.Q}}&q={{urlquery $.Table.Q}}{{end}}">Short (&lt;80)</a>
+  <a class="btn {{if eq .Length "medium"}}btn-primary{{else}}btn-outline-primary{{end}}" href="{{.Table.Action}}?length=medium{{if $.Table.Q}}&q={{urlquery $.Table.Q}}{{end}}">Medium (80–200)</a>
+  <a class="btn {{if eq .Length "long"}}btn-primary{{else}}btn-outline-primary{{end}}" href="{{.Table.Action}}?length=long{{if $.Table.Q}}&q={{urlquery $.Table.Q}}{{end}}">Long (&gt;200)</a>
+</div>
+
+{{- /* #table-results is the toolbar live-search swap target: filter links,
+       empty state, rows and pagination re-render together. */ -}}
+<div id="table-results">
+{{if not .Table.Total}}
+<p class="text-body-secondary">{{if or .Table.Q .Table.Params}}No results match your search.{{else}}No questions yet — <a href="/teacher/questions/new">add your first one</a>.{{end}}</p>
+{{else}}
+<div class="card">
+  <div class="card-body">
+    <table class="table align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Question</th>
+          <th>Type</th>
+          <th>Length</th>
+          <th>Created</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Rows}}
+        <tr>
+          <td class="text-break">{{.Teks}}</td>
+          <td>{{if eq .Type "pg"}}Single choice{{else if eq .Type "multi"}}Multiple choice{{else}}Essay{{end}}</td>
+          <td>{{.TeksLen}} chars</td>
+          <td>{{.CreatedAt.Format "2006-01-02"}}</td>
+          <td class="text-end text-nowrap">
+            <a class="btn btn-sm btn-outline-secondary" href="/teacher/questions/{{.ID}}/edit" title="Edit question" aria-label="Edit question" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+            <button type="button" class="btn btn-sm btn-outline-danger" data-post="/teacher/questions/{{.ID}}/delete" data-confirm="Delete this question?" data-success="Question deleted successfully." title="Delete question" aria-label="Delete question" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{template "table-pagination" .}}
+{{end}}
+</div>{{/* /#table-results */}}
+<script src="{{asset "/js/teacher.js"}}"></script>
+{{template "app_foot" .}}{{end}}

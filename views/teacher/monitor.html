@@ -1,0 +1,138 @@
+{{define "page-teacher-monitor"}}{{template "app_head" .}}
+<div id="monitor" data-quiz-id="{{.ID}}" data-status="{{.Status}}" data-stream="{{.StreamURL}}">
+
+  <header class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+    <div>
+      <h1 class="h4 mb-1">{{.Judul}}</h1>
+      <p class="text-body-secondary small mb-0">
+        Join code <code>{{.Code}}</code> &middot; {{.TimerType}} timer
+        &middot; status <span class="border rounded px-2">{{.Status}}</span>
+      </p>
+    </div>
+    <div id="monitor-clock" class="text-end" data-ends="{{.EndsUnix}}" data-now="{{.ServerNow}}"{{if not .TimerOn}} hidden{{end}}>
+      <span class="text-body-secondary small">Time left</span>
+      <div class="fs-5 fw-semibold" id="monitor-timer">&mdash;:__</div>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+      <button type="button" id="btn-stop" class="btn btn-outline-danger" data-act="stop" hidden><i class="bi bi-stop-circle me-1" aria-hidden="true"></i>Stop</button>
+      <button type="button" id="btn-close" class="btn btn-danger" data-act="close" hidden><i class="bi bi-power me-1" aria-hidden="true"></i>Close quiz</button>
+    </div>
+  </header>
+
+  <section class="mb-4">
+    <h2 class="h5"><i class="bi bi-hourglass-split me-2" aria-hidden="true"></i>Waiting room <span class="badge text-bg-secondary" id="pending-count">{{.Pending}}</span></h2>
+    <ul class="list-group" id="waiting-list">
+      {{range .Cards}}
+      {{if eq .Status "pending"}}
+      <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2" data-pid="{{.ParticipantID}}">
+        <span>{{.Name}}</span>
+        <div class="d-flex gap-1">
+          <button type="button" class="btn btn-sm btn-outline-success" data-act="approve" data-pid="{{.ParticipantID}}" title="Approve" aria-label="Approve" data-quiz-tooltip><i class="bi bi-check-lg" aria-hidden="true"></i></button>
+          <button type="button" class="btn btn-sm btn-outline-danger" data-act="reject" data-pid="{{.ParticipantID}}" title="Reject" aria-label="Reject" data-quiz-tooltip><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+        </div>
+      </li>
+      {{end}}
+      {{end}}
+      {{if not .Pending}}<li class="list-group-item text-body-secondary">Nobody is waiting.</li>{{end}}
+    </ul>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h5"><i class="bi bi-people me-2" aria-hidden="true"></i>Students</h2>
+    <div class="row g-2" id="card-list">
+      {{range .Cards}}
+      <div class="col-md-6 col-xl-4" data-pid="{{.ParticipantID}}">
+        {{/* yellow + flagged/`violation(s)` badge + both actions once the
+             student is detected as cheating (violations) or flagged
+             (cheating) — spec §6.9/§7 */}}
+        <div class="card p-2{{if or .Cheating (gt .Violations 0)}} bg-warning-subtle border-warning{{end}}">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <strong>{{.Name}}</strong>
+            <span class="d-flex gap-1 align-items-center">
+              {{if .Cheating}}<span class="badge text-bg-danger">flagged</span>{{else if gt .Violations 0}}<span class="badge text-bg-danger">{{.Violations}} violation(s)</span>{{end}}
+              <span class="badge text-bg-secondary">{{.Status}}</span>
+            </span>
+          </div>
+          <div class="small text-body-secondary">
+            {{if eq .Page "preview"}}Preview{{else if gt .CurrentQ 0}}Question {{.CurrentQ}}{{end}}{{if or (eq .Page "preview") (gt .CurrentQ 0)}} &middot; {{end}}
+            {{if .Connected}}connected{{else}}not connected{{end}}{{if and .Cheating .Violations}} &middot; <span class="text-danger">{{.Violations}} violation(s)</span>{{end}}
+          </div>
+          {{if and (eq $.TimerType "per_soal") .Spent}}
+          <div class="small" data-spent-line>
+            {{range .Spent}}<span class="me-1">Q{{.Q}} {{.Sec}}s</span>{{end}}
+          </div>
+          {{end}}
+          {{if .Answer}}<div class="small" data-answer-line>{{if .AnswerQPos}}answer Q{{.AnswerQPos}}: {{.AnswerText}}{{else}}answer: {{.AnswerText}}{{end}}</div>{{end}}
+          {{if .ScoreText}}<div class="fw-semibold">{{.ScoreText}}</div>{{end}}
+          {{if or .Cheating (gt .Violations 0)}}
+          <div class="mt-2 d-flex gap-1">
+            <button type="button" class="btn btn-sm btn-outline-danger" data-act="cheat_toggle" data-pid="{{.ParticipantID}}" title="Mark as cheating" aria-label="Mark as cheating" data-quiz-tooltip><i class="bi bi-exclamation-triangle" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-sm btn-danger" data-act="remove" data-pid="{{.ParticipantID}}" data-name="{{.Name}}" data-bs-toggle="modal" data-bs-target="#confirmRemove" title="Remove student" aria-label="Remove student" data-quiz-tooltip><i class="bi bi-person-dash" aria-hidden="true"></i></button>
+          </div>
+          {{end}}
+        </div>
+      </div>
+      {{end}}
+      {{if not .Cards}}<p class="text-body-secondary">Nobody has joined yet.</p>{{end}}
+    </div>
+  </section>
+
+  <section>
+    <h2 class="h5"><i class="bi bi-trophy me-2" aria-hidden="true"></i>Live ranking</h2>
+    <ol class="list-group list-group-numbered" id="monitor-rank">
+      {{range .Ranking}}
+      <li class="list-group-item d-flex justify-content-between align-items-center{{if .Cheating}} active{{end}}">
+        <span>{{.Name}}{{if .Removed}} &middot; removed{{end}}{{if .Cheating}} &middot; flagged{{end}}</span>
+        <span class="fw-semibold">{{printf "%.2f" .Score}}</span>
+      </li>
+      {{end}}
+      {{if not .Ranking}}<li class="list-group-item text-body-secondary">Ranking appears once answers arrive (if ranking_live is on).</li>{{end}}
+    </ol>
+  </section>
+
+</div>
+
+<!-- close confirmation (spec §6.5): opened from the 409 {working:N} close
+     response; monitor.js confirms with {status:"selesai", confirm:true} -->
+<div class="modal fade" id="confirmClose" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5">Close quiz</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <span id="close-working-count">0</span> students are still working — close anyway?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Keep open</button>
+        <button type="button" class="btn btn-danger" id="close-confirm-btn"><i class="bi bi-power me-1" aria-hidden="true"></i>Close anyway</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- remove confirmation (spec §6.9): modal is MANDATORY — Remove always
+     opens it and only the explicit Confirm posts {action:remove} -->
+<div class="modal fade" id="confirmRemove" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5">Remove student</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Remove <strong id="remove-student-name"></strong> from this quiz?
+        Their answers are scored, then they are out.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Keep</button>
+        <button type="button" class="btn btn-danger" id="remove-confirm-btn"><i class="bi bi-person-dash me-1" aria-hidden="true"></i>Remove</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="application/json" id="monitor-data">{{.MonitorData}}</script>
+<script src="{{asset "/js/monitor.js"}}" defer></script>
+{{template "app_foot" .}}{{end}}

@@ -1,0 +1,39 @@
+{{define "feedback-toasts"}}
+{{- /* One Bootstrap Toast stack per page (bottom-right). .Flash is the
+       server-rendered message: {Kind: "success"|"danger", Message: "…"};
+       JS appends its own toasts to the same container. */ -}}
+<div class="toast-container bottom-0 end-0 p-3" id="toast-stack">
+  {{with .Flash}}
+  <div class="toast" role="alert" aria-live="assertive" aria-atomic="true"
+       data-ssr-toast data-bs-delay="{{if eq .Kind "success"}}4000{{else}}6000{{end}}">
+    <div class="toast-header text-bg-{{.Kind}}">
+      <strong class="me-auto">{{if eq .Kind "success"}}Success{{else}}Error{{end}}</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+    <div class="toast-body">{{.Message}}</div>
+  </div>
+  {{end}}
+</div>
+{{end}}
+
+{{define "confirm-modal"}}
+{{- /* Generic confirmation dialog: quizConfirm() fills the body from the
+       triggering element's data-confirm and runs the action on Confirm.
+       Never an alert()/confirm() — see web/js/ui.js. */ -}}
+<div class="modal fade" id="confirm-modal" tabindex="-1" role="dialog"
+     aria-modal="true" aria-labelledby="confirm-modal-title" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5" id="confirm-modal-title">Confirm</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="confirm-modal-body"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirm-modal-ok"><i class="bi bi-check-lg me-1" aria-hidden="true"></i>Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

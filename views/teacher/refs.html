@@ -1,0 +1,38 @@
+{{define "page-teacher-refs"}}{{template "app_head" .}}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h1 class="h4 mb-0">{{.Title}}</h1>
+  <a class="btn btn-primary" href="{{.Action}}/new"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Add {{if eq .Kind "kelas"}}class{{else}}major{{end}}</a>
+</div>
+{{template "table-toolbar" .}}
+<div class="btn-group btn-group-sm mb-3" role="group" aria-label="Sort order">
+  <a class="btn {{if not .Sort}}btn-primary{{else}}btn-outline-secondary{{end}}" href="{{.Action}}{{if .Table.Q}}?q={{urlquery .Table.Q}}{{end}}">Name A–Z</a>
+  <a class="btn {{if eq .Sort "baru"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="{{.Action}}?sort=baru{{if .Table.Q}}&q={{urlquery .Table.Q}}{{end}}">Newest</a>
+</div>
+{{- /* #table-results is the toolbar live-search swap target: sort links,
+       empty state, rows and pagination re-render together. */ -}}
+<div id="table-results">
+{{if not .Table.Total}}
+<p class="text-body-secondary">{{if or .Table.Q .Table.Params}}No results match your search.{{else}}No entries yet.{{end}}</p>
+{{else}}
+<div class="card">
+  <div class="card-body">
+    <table class="table align-middle mb-0">
+      <thead><tr><th>Name</th><th class="text-end">Actions</th></tr></thead>
+      <tbody>
+        {{range .Rows}}
+        <tr>
+          <td>{{.Nama}}</td>
+          <td class="text-end">
+            <button type="button" class="btn btn-sm btn-outline-danger" title="Delete {{.Nama}}" aria-label="Delete {{.Nama}}" data-bs-toggle="tooltip" data-post="{{$.Action}}/{{.ID}}/delete" data-confirm="Delete {{.Nama}}?" data-success="{{if eq $.Kind "kelas"}}Class{{else}}Major{{end}} &quot;{{.Nama}}&quot; deleted successfully."><i class="bi bi-trash3" aria-hidden="true"></i></button>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{template "table-pagination" .}}
+{{end}}
+</div>{{/* /#table-results */}}
+<script src="{{asset "/js/teacher.js"}}"></script>
+{{template "app_foot" .}}{{end}}

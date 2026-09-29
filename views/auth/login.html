@@ -1,0 +1,26 @@
+{{define "page-login"}}{{template "head" .}}
+<div class="row justify-content-center">
+  <div class="col-sm-8 col-md-5 col-lg-4">
+    <div class="card">
+      <div class="card-body p-4">
+        <h1 class="h5 mb-3">Sign in</h1>
+        <form action="/login" method="post">
+          <div class="mb-3">
+            <label class="form-label" for="identity">Username or email</label>
+            <input class="form-control" id="identity" name="identity" autocomplete="username" value="{{.Identity}}" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="password">Password</label>
+            <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required>
+          </div>
+          <button class="btn btn-primary w-100" type="submit"><i class="bi bi-box-arrow-in-right me-2" aria-hidden="true"></i>Sign in</button>
+        </form>
+        <div class="d-flex justify-content-between mt-3">
+          <a href="/register">Register</a>
+          <a href="/forgot-password">Forgot password</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{template "foot" .}}{{end}}

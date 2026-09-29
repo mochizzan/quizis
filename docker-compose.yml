@@ -1,0 +1,30 @@
+services:
+  app:
+    build: .
+    ports: ["8090:8090"]
+    environment:
+      DB_HOST: db          # absent from .env, so this survives cleanenv
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./data/uploads:/app/data/uploads
+    restart: unless-stopped
+
+  db:
+    image: mariadb:12
+    environment:
+      MARIADB_DATABASE:      ${DB_NAME:-quiz}
+      MARIADB_USER:          ${DB_USER:-quiz}
+      MARIADB_PASSWORD:      ${DB_PASS:-quizpass}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASS:-rootpass}
+    ports: ["3306:3306"]
+    volumes:
+      - ./data/mariadb:/var/lib/mysql
+      - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped

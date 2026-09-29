@@ -1,0 +1,109 @@
+{{define "page-student-history"}}
+{{template "app_head" .}}
+  <header class="mb-4">
+    <p class="text-body-secondary small mb-1">History</p>
+    <h1 class="h3 mb-0">Your attempts</h1>
+  </header>
+
+  {{template "table-toolbar" .}}
+  <div class="btn-group btn-group-sm mb-3 history-filter" role="group" aria-label="Filter status">
+    <a class="btn {{if not .Status}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/history{{if .Table.Q}}?q={{urlquery .Table.Q}}{{end}}">Semua</a>
+    <a class="btn {{if eq .Status "pending"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/history?status=pending{{if .Table.Q}}&q={{urlquery .Table.Q}}{{end}}">Menunggu</a>
+    <a class="btn {{if eq .Status "registered"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/history?status=registered{{if .Table.Q}}&q={{urlquery .Table.Q}}{{end}}">Terdaftar</a>
+    <a class="btn {{if eq .Status "started"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/history?status=started{{if .Table.Q}}&q={{urlquery .Table.Q}}{{end}}">Berjalan</a>
+    <a class="btn {{if eq .Status "selesai"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/history?status=selesai{{if .Table.Q}}&q={{urlquery .Table.Q}}{{end}}">Selesai</a>
+    <a class="btn {{if eq .Status "dikeluarkan"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/history?status=dikeluarkan{{if .Table.Q}}&q={{urlquery .Table.Q}}{{end}}">Dikeluarkan</a>
+  </div>
+  {{if not .Table.Total}}
+  <p class="text-body-secondary">{{if or .Table.Q .Table.Params}}No results match your search.{{else}}No attempts yet.{{end}}</p>
+  {{else}}
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Quiz</th>
+          <th class="text-end">Attempt</th>
+          <th>Status</th>
+          {{if .ShowScoreColumn}}<th class="text-end">Score</th>{{end}}
+          {{if .ShowRankingColumn}}<th class="text-end">Rank</th>{{end}}
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Rows}}
+        <tr>
+          <td>{{.Judul}}</td>
+          <td class="text-end">{{.AttemptNo}}</td>
+          <td>
+            {{if .Removed}}<span class="badge text-bg-danger">removed</span>
+            {{else if .Cheating}}<span class="badge text-bg-warning">flagged</span>
+            {{else}}{{.Status}}{{end}}
+          </td>
+          {{if $.ShowScoreColumn}}
+          <td class="text-end">{{if .ShowScore}}{{if .Score.Valid}}{{printf "%.2f" .Score.Float64}}{{else}}&mdash;{{end}}{{else}}&mdash;{{end}}</td>
+          {{end}}
+          {{if $.ShowRankingColumn}}
+          <td class="text-end">{{if and .ShowRanking .Rank}}#{{.Rank}}{{else}}&mdash;{{end}}</td>
+          {{end}}
+          <td class="text-end"><a href="/history/{{.ParticipantID}}"><i class="bi bi-box-arrow-in-right me-1" aria-hidden="true"></i>Details</a></td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{end}}
+  {{template "table-pagination" .}}
+{{template "app_foot" .}}{{end}}
+
+{{define "page-student-history-detail"}}
+{{template "app_head" .}}
+  <header class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+    <div>
+      <p class="text-body-secondary small mb-1">Attempt {{.AttemptNo}}</p>
+      <h1 class="h4 mb-0">{{.Judul}}</h1>
+    </div>
+    <a class="btn btn-outline-secondary" href="/history"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>Back to history</a>
+  </header>
+
+  <div class="mb-4 d-flex gap-4 flex-wrap align-items-center">
+    {{if .HV.ShowScore}}
+    <div>
+      <div class="text-body-secondary small">Score</div>
+      <div class="fs-5 fw-semibold">{{.ScoreText}}</div>
+    </div>
+    {{end}}
+    {{if .HV.ShowRanking}}
+    <div>
+      <div class="text-body-secondary small">Rank</div>
+      <div class="fs-5 fw-semibold">{{if .Rank}}#{{.Rank}}{{else}}&mdash;{{end}}</div>
+    </div>
+    {{end}}
+    <div>
+      <div class="text-body-secondary small">Status</div>
+      <div>
+        {{if .Removed}}<span class="badge text-bg-danger">removed</span>
+        {{else if .Cheating}}<span class="badge text-bg-warning">flagged</span>
+        {{else}}{{.Status}}{{end}}
+      </div>
+    </div>
+  </div>
+
+  {{if .HV.Questions}}
+  <ol class="list-group list-group-numbered">
+    {{range .HV.Questions}}
+    <li class="list-group-item">
+      <div>{{.Question}}</div>
+      <div class="small mt-1">
+        Your answer: <strong>{{.YourAnswer}}</strong>
+        {{if .Correct}}<span class="text-success">correct</span>{{else}}<span class="text-danger">wrong</span>{{end}}
+      </div>
+      {{if .CorrectAnswer}}
+      <div class="small text-body-secondary">Correct: {{.CorrectAnswer}}</div>
+      {{end}}
+    </li>
+    {{end}}
+  </ol>
+  {{else}}
+  <p class="text-body-secondary">Question review is off for this quiz.</p>
+  {{end}}
+{{template "app_foot" .}}{{end}}

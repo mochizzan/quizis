@@ -1,0 +1,261 @@
+:root, [data-bs-theme="light"] {
+  --bs-body-bg:#F4F8FD; --bs-body-color:#0F2240;
+  --bs-body-bg-rgb:244,248,253; --bs-body-color-rgb:15,34,64;
+  --bs-emphasis-color:#0A1B33; --bs-emphasis-color-rgb:10,27,51;
+  --bs-secondary-color:#47608C;
+  --bs-tertiary-bg:#FFFFFF; --bs-tertiary-bg-rgb:255,255,255;
+  --bs-border-color:#C4E2F5; --bs-border-color-translucent:#6B8BB7;
+  --bs-body-font-weight:400;
+  /* Google Fonts: Noto Sans Cypro Minoan 400, loaded via the head partials */
+  --bs-body-font-family: "Noto Sans Cypro Minoan", sans-serif;
+  --bs-font-sans-serif: "Noto Sans Cypro Minoan", sans-serif;
+  --bs-border-radius:0.75rem; --bs-border-radius-sm:0.5rem;
+  --bs-border-radius-lg:0.75rem; --bs-border-radius-xl:1rem;
+
+  /* brand + palette: blue family */
+  --bs-primary:#2C5EAD; --bs-primary-rgb:44,94,173;
+  --bs-secondary:#47608C; --bs-secondary-rgb:71,96,140;
+  --bs-success:#0E7A46; --bs-success-rgb:14,122,70;
+  --bs-danger:#C93128; --bs-danger-rgb:201,49,40;
+  --bs-warning:#A15C0B; --bs-warning-rgb:161,92,11;
+  --bs-info:#4BB8FA; --bs-info-rgb:75,184,250;
+  --bs-light:#C4E2F5; --bs-light-rgb:196,226,245;
+  --bs-dark:#10233F; --bs-dark-rgb:16,35,63;
+  --bs-secondary-bg:#C4E2F5; --bs-secondary-bg-rgb:196,226,245;
+  --bs-link-color:#2C5EAD; --bs-link-color-rgb:44,94,173;
+  --bs-link-hover-color:#1C4C93;
+  --bs-code-color:#2C5EAD;
+  --bs-focus-ring-color:#1591DC;
+  --bs-form-valid-color:#0E7A46; --bs-form-valid-border-color:#0E7A46;
+  --bs-form-invalid-color:#C93128; --bs-form-invalid-border-color:#C93128;
+
+  /* on-surface semantic text variants + focus-halo rgb helpers (light) */
+  --bs-success-text:#0E7A46; --bs-danger-text:#C93128; --bs-warning-text:#A15C0B;
+  --bs-secondary-focus-rgb:44,94,173; --bs-success-focus-rgb:14,122,70;
+  --bs-danger-focus-rgb:201,49,40; --bs-warning-focus-rgb:161,92,11;
+
+  /* alerts: Bootstrap ships hardcoded red/green/gray tints — the semantic hues
+     are retinted here per theme so no stale neutral/red-green split survives */
+  --bs-success-text-emphasis:#0B5C38; --bs-success-bg-subtle:#E9F7F0; --bs-success-border-subtle:#459873;
+  --bs-danger-text-emphasis:#A3241C; --bs-danger-bg-subtle:#FBECEA; --bs-danger-border-subtle:#B8544B;
+  --bs-secondary-text-emphasis:#17385E; --bs-secondary-bg-subtle:#C4E2F5; --bs-secondary-border-subtle:#1591DC;
+}
+[data-bs-theme="dark"] {
+  --bs-body-bg:#0B1A30; --bs-body-color:#D7E8F8;
+  --bs-body-bg-rgb:11,26,48; --bs-body-color-rgb:215,232,248;
+  --bs-emphasis-color:#EDF6FE; --bs-emphasis-color-rgb:237,246,254;
+  --bs-secondary-color:#8FAECC;
+  --bs-tertiary-bg:#10233F; --bs-tertiary-bg-rgb:16,35,63;
+  --bs-border-color:rgba(196,226,245,0.16); --bs-border-color-translucent:#4E86B8;
+
+  /* same blue family, dark-derived: primary brightens, chips lift */
+  --bs-primary:#1591DC; --bs-primary-rgb:21,145,220;
+  --bs-secondary:#8FAECC; --bs-secondary-rgb:143,174,204;
+  --bs-success:#0E7A46; --bs-success-rgb:14,122,70;
+  --bs-danger:#C93128; --bs-danger-rgb:201,49,40;
+  --bs-warning:#A15C0B; --bs-warning-rgb:161,92,11;
+  --bs-info:#4BB8FA; --bs-info-rgb:75,184,250;
+  --bs-light:#C4E2F5; --bs-light-rgb:196,226,245;
+  --bs-dark:#3A6E9F; --bs-dark-rgb:58,110,159;
+  --bs-secondary-bg:#16304F; --bs-secondary-bg-rgb:22,48,79;
+  --bs-link-color:#4BB8FA; --bs-link-color-rgb:75,184,250;
+  --bs-link-hover-color:#C4E2F5;
+  --bs-code-color:#4BB8FA;
+  --bs-focus-ring-color:#4BB8FA;
+  --bs-form-valid-color:#0E7A46; --bs-form-valid-border-color:#0E7A46;
+  --bs-form-invalid-color:#C93128; --bs-form-invalid-border-color:#C93128;
+
+  /* semantic rgb stays constant across themes (filled chips need the deep
+     hue + white label); only the on-surface text/halo variants lighten */
+  --bs-success-text:#45D08A; --bs-danger-text:#FF8A80; --bs-warning-text:#E8A33D;
+  --bs-secondary-focus-rgb:75,184,250; --bs-success-focus-rgb:69,208,138;
+  --bs-danger-focus-rgb:255,138,128; --bs-warning-focus-rgb:232,163,61;
+
+  --bs-success-text-emphasis:#45D08A; --bs-success-bg-subtle:#12251E; --bs-success-border-subtle:#3F9B75;
+  --bs-danger-text-emphasis:#FF8A80; --bs-danger-bg-subtle:#2C1614; --bs-danger-border-subtle:#A8544B;
+  --bs-secondary-text-emphasis:#C3DDF3; --bs-secondary-bg-subtle:#1B3450; --bs-secondary-border-subtle:#4490C4;
+}
+/* controlled semantic accents — ONLY these two hues in the whole app */
+.text-ok   { color: var(--bs-success-text) !important; }   /* correct answer */
+.text-bad  { color: var(--bs-danger-text) !important; }    /* error / delete / cheat */
+.bg-ok     { background-color: rgb(var(--bs-success-rgb)) !important; }
+.bg-bad    { background-color: rgb(var(--bs-danger-rgb)) !important; }
+
+/* semantic text utilities → on-surface variants (dark tints lighten via the tokens above) */
+.text-success { color: var(--bs-success-text) !important; }
+.text-warning { color: var(--bs-warning-text) !important; }
+.text-danger  { color: var(--bs-danger-text) !important; }
+
+/* .text-bg-warning ships a black label; on the unified ochre that is 4.05:1 — white is 5.18:1 */
+.text-bg-warning { color:#fff !important; }
+/* light-chip label in dark mode: white on muted blue is only 2.4:1 — invert to body bg (7.55:1) */
+[data-bs-theme="dark"] .text-bg-secondary { color: var(--bs-body-bg) !important; }
+
+/* Bootstrap compiles component hues as hardcoded --bs-btn-* / focus values
+   (e.g. .btn-primary hardcodes its own --bs-btn-bg), so the :root --bs-primary
+   override above never reaches them. These are --bs-* property overrides only — no
+   layout CSS — per spec §11.20 ("theming via --bs-* overrides in theme.css"). */
+
+/* primary buttons → brand blue, dark-mode aware (text uses body bg) */
+.btn-primary {
+  --bs-btn-color: var(--bs-body-bg);
+  --bs-btn-bg: var(--bs-primary);
+  --bs-btn-border-color: var(--bs-primary);
+  --bs-btn-hover-color: var(--bs-body-bg);
+  --bs-btn-hover-bg: var(--bs-link-hover-color);
+  --bs-btn-hover-border-color: var(--bs-link-hover-color);
+  --bs-btn-focus-shadow-rgb: var(--bs-primary-rgb);
+  --bs-btn-active-color: var(--bs-body-bg);
+  --bs-btn-active-bg: var(--bs-link-hover-color);
+  --bs-btn-active-border-color: var(--bs-link-hover-color);
+  --bs-btn-disabled-color: var(--bs-body-bg);
+  --bs-btn-disabled-bg: var(--bs-primary);
+  --bs-btn-disabled-border-color: var(--bs-primary);
+}
+.btn-outline-primary {
+  --bs-btn-color: var(--bs-primary);
+  --bs-btn-border-color: var(--bs-primary);
+  --bs-btn-hover-color: var(--bs-body-bg);
+  --bs-btn-hover-bg: var(--bs-primary);
+  --bs-btn-hover-border-color: var(--bs-primary);
+  --bs-btn-focus-shadow-rgb: var(--bs-primary-rgb);
+  --bs-btn-active-color: var(--bs-body-bg);
+  --bs-btn-active-bg: var(--bs-primary);
+  --bs-btn-active-border-color: var(--bs-primary);
+  --bs-btn-disabled-color: var(--bs-primary);
+  --bs-btn-disabled-border-color: var(--bs-primary);
+}
+
+/* secondary (most-used) buttons → vivid #1591DC accent with ink labels */
+.btn-secondary {
+  --bs-btn-color:#07192C;
+  --bs-btn-bg:#1591DC;
+  --bs-btn-border-color:#1591DC;
+  --bs-btn-hover-color:#07192C;
+  --bs-btn-hover-bg:#4BB8FA;
+  --bs-btn-hover-border-color:#4BB8FA;
+  --bs-btn-focus-shadow-rgb: var(--bs-secondary-focus-rgb);
+  --bs-btn-active-color:#FFFFFF;
+  --bs-btn-active-bg:#1279B8;
+  --bs-btn-active-border-color:#1279B8;
+  --bs-btn-disabled-color:#07192C;
+  --bs-btn-disabled-bg:#1591DC;
+  --bs-btn-disabled-border-color:#1591DC;
+}
+.btn-outline-secondary {
+  --bs-btn-color: var(--bs-link-color);
+  --bs-btn-border-color: var(--bs-link-color);
+  --bs-btn-hover-color:#07192C;
+  --bs-btn-hover-bg:#1591DC;
+  --bs-btn-hover-border-color:#1591DC;
+  --bs-btn-focus-shadow-rgb: var(--bs-secondary-focus-rgb);
+  --bs-btn-active-color:#FFFFFF;
+  --bs-btn-active-bg:#1279B8;
+  --bs-btn-active-border-color:#1279B8;
+  --bs-btn-disabled-color: var(--bs-secondary-color);
+  --bs-btn-disabled-border-color: var(--bs-border-color-translucent);
+}
+
+/* semantic danger/success → the app's two sanctioned accents */
+.btn-danger {
+  --bs-btn-bg: #C93128; --bs-btn-border-color: #C93128;
+  --bs-btn-hover-bg: #A6241B; --bs-btn-hover-border-color: #A6241B;
+  --bs-btn-active-bg: #8C1E16; --bs-btn-active-border-color: #8C1E16;
+  --bs-btn-disabled-bg: #C93128; --bs-btn-disabled-border-color: #C93128;
+  --bs-btn-focus-shadow-rgb: var(--bs-danger-focus-rgb);
+}
+.btn-outline-danger {
+  --bs-btn-color: var(--bs-danger-text); --bs-btn-border-color: var(--bs-danger-text);
+  --bs-btn-hover-bg: #C93128; --bs-btn-hover-border-color: #C93128;
+  --bs-btn-active-bg: #A6241B; --bs-btn-active-border-color: #A6241B;
+  --bs-btn-disabled-color: var(--bs-secondary-color);
+  --bs-btn-disabled-border-color: var(--bs-border-color-translucent);
+  --bs-btn-focus-shadow-rgb: var(--bs-danger-focus-rgb);
+}
+.btn-success {
+  --bs-btn-bg: #0E7A46; --bs-btn-border-color: #0E7A46;
+  --bs-btn-hover-bg: #0B6639; --bs-btn-hover-border-color: #0B6639;
+  --bs-btn-active-bg: #095730; --bs-btn-active-border-color: #095730;
+  --bs-btn-disabled-bg: #0E7A46; --bs-btn-disabled-border-color: #0E7A46;
+  --bs-btn-focus-shadow-rgb: var(--bs-success-focus-rgb);
+}
+.btn-outline-success {
+  --bs-btn-color: var(--bs-success-text); --bs-btn-border-color: var(--bs-success-text);
+  --bs-btn-hover-bg: #0E7A46; --bs-btn-hover-border-color: #0E7A46;
+  --bs-btn-active-bg: #0B6639; --bs-btn-active-border-color: #0B6639;
+  --bs-btn-disabled-color: var(--bs-secondary-color);
+  --bs-btn-disabled-border-color: var(--bs-border-color-translucent);
+  --bs-btn-focus-shadow-rgb: var(--bs-success-focus-rgb);
+}
+.btn-outline-warning {
+  --bs-btn-color: var(--bs-warning-text); --bs-btn-border-color: var(--bs-warning-text);
+  --bs-btn-hover-bg: #A15C0B; --bs-btn-hover-border-color: #A15C0B;
+  --bs-btn-active-bg: #86500A; --bs-btn-active-border-color: #86500A;
+  --bs-btn-disabled-color: var(--bs-secondary-color);
+  --bs-btn-disabled-border-color: var(--bs-border-color-translucent);
+  --bs-btn-focus-shadow-rgb: var(--bs-warning-focus-rgb);
+}
+/* link buttons keep link colors from the root tokens; focus halo follows brand */
+.btn-link {
+  --bs-btn-focus-shadow-rgb: var(--bs-primary-rgb);
+}
+/* focus halo: dist alpha .5 lands under 3:1 for several hues — .8 measured >=3.4:1
+   for every bridge above, in both themes */
+.btn {
+  --bs-btn-focus-box-shadow: 0 0 0 0.25rem rgba(var(--bs-btn-focus-shadow-rgb), 0.8);
+}
+
+/* interactive controls: input borders must reach 3:1 (structural --bs-border-color
+   stays soft #C4E2F5 for decorative edges) */
+.form-control, .form-select, .input-group-text {
+  border-color: var(--bs-border-color-translucent);
+}
+/* select chevron follows the palette: brand blue in light, soft blue in dark */
+.form-select {
+  --bs-form-select-bg-img: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%232C5EAD' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+}
+[data-bs-theme="dark"] .form-select {
+  --bs-form-select-bg-img: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23C4E2F5' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+}
+
+/* form focus rings default to Bootstrap's blue glow (see the dist .form-control:focus
+   block) — brand primary gives 5.95:1 / 5.08:1 border contrast in light/dark */
+.form-control:focus, .form-select:focus {
+  border-color: var(--bs-primary);
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.15);
+}
+.form-check-input:checked, .form-check-input:focus {
+  background-color: var(--bs-primary);
+  border-color: var(--bs-primary);
+}
+
+/* pagination: active cell = primary/body-bg; focus ring and cell borders on tokens */
+.pagination {
+  --bs-pagination-border-color: var(--bs-border-color-translucent);
+  --bs-pagination-hover-border-color: var(--bs-border-color-translucent);
+  --bs-pagination-focus-box-shadow: 0 0 0 0.25rem var(--bs-focus-ring-color);
+  --bs-pagination-active-color: var(--bs-body-bg);
+  --bs-pagination-active-bg: var(--bs-primary);
+  --bs-pagination-active-border-color: var(--bs-primary);
+}
+/* list groups (ranking, live monitor): active row = primary/body-bg */
+.list-group {
+  --bs-list-group-active-color: var(--bs-body-bg);
+  --bs-list-group-active-bg: var(--bs-primary);
+  --bs-list-group-active-border-color: var(--bs-primary);
+}
+/* nav states: pills fall back to primary; tabs get a primary top accent line */
+.nav-pills {
+  --bs-nav-pills-link-active-color: var(--bs-body-bg);
+  --bs-nav-pills-link-active-bg: var(--bs-primary);
+}
+.nav-tabs {
+  --bs-nav-tabs-link-active-border-color: var(--bs-primary) var(--bs-border-color) var(--bs-body-bg);
+}
+.nav-link:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem var(--bs-focus-ring-color);
+}
+.btn-close {
+  --bs-btn-close-focus-shadow: 0 0 0 0.25rem var(--bs-focus-ring-color);
+}

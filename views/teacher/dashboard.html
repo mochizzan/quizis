@@ -1,0 +1,132 @@
+{{define "page-teacher-dashboard"}}{{template "app_head" .}}
+<header class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+  <div>
+    <p class="text-body-secondary small mb-1">Guru</p>
+    <h1 class="h4 mb-0">Dashboard</h1>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {{if .Pending}}<a class="badge bg-bad text-white text-decoration-none" href="/teacher/password-resets"><i class="bi bi-key me-1" aria-hidden="true"></i>{{.Pending}} pending resets</a>{{end}}
+    <a class="btn btn-sm btn-outline-secondary" href="/teacher/classes"><i class="bi bi-people me-1" aria-hidden="true"></i>Classes</a>
+    <a class="btn btn-sm btn-outline-secondary" href="/teacher/majors"><i class="bi bi-mortarboard me-1" aria-hidden="true"></i>Majors</a>
+    <a class="btn btn-sm btn-outline-secondary" href="/teacher/questions"><i class="bi bi-patch-question me-1" aria-hidden="true"></i>Question bank</a>
+    <a class="btn btn-sm btn-primary" href="/teacher/quiz/new"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New quiz</a>
+  </div>
+</header>
+
+<div id="teacher-dashboard" data-endpoint="/teacher/api/overview">
+  {{- /* Inline error slot — only used when ui.js's quizToast is unavailable
+         (e.g. a parse failure during boot). Never alert(). */ -}}
+  <div id="dash-error" class="alert alert-danger" role="alert" hidden></div>
+
+  {{- /* Summary cards — values written by web/js/teacher_dashboard.js from
+         OverviewJSON (payload.summary keys shown as data-summary). */ -}}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-xl-3">
+      <div class="card h-100"><div class="card-body py-3">
+        <p class="text-body-secondary small mb-1">Total students</p>
+        <p class="h4 mb-0" data-summary="total_murid">0</p>
+      </div></div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="card h-100"><div class="card-body py-3">
+        <p class="text-body-secondary small mb-1">Active quizzes</p>
+        <p class="h4 mb-0" data-summary="quiz_aktif">0</p>
+      </div></div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="card h-100"><div class="card-body py-3">
+        <p class="text-body-secondary small mb-1">Inactive quizzes</p>
+        <p class="h4 mb-0" data-summary="quiz_nonaktif">0</p>
+      </div></div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="card h-100"><div class="card-body py-3">
+        <p class="text-body-secondary small mb-1">Finished attempts</p>
+        <p class="h4 mb-0" data-summary="peserta_mengerjakan">0</p>
+      </div></div>
+    </div>
+  </div>
+
+  {{- /* Filter bar — options + initial selection come from
+         payload.filters / payload.applied; every change refetches
+         /teacher/api/overview over XHR (no page reload). */ -}}
+  <div class="card mb-4" id="dash-filters">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-12 col-md-4">
+          <label class="form-label" for="dash-filter-kelas">Kelas</label>
+          <select class="form-select" id="dash-filter-kelas" data-filter="kelas"></select>
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label" for="dash-filter-jurusan">Major</label>
+          <select class="form-select" id="dash-filter-jurusan" data-filter="jurusan"></select>
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label" for="dash-filter-status">Quiz status</label>
+          <select class="form-select" id="dash-filter-status" data-filter="status"></select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{- /* Charts (Chart.js, vendored under web/vendor/chartjs/) — fixed-height
+         wrappers keep the canvases stable; JS owns every data update. */ -}}
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-lg-6">
+      <div class="card h-100"><div class="card-body">
+        <h2 class="h6 mb-3">Students per grade</h2>
+        <div style="height: 260px;"><canvas id="dash-chart-kelas" role="img" aria-label="Students per grade"></canvas></div>
+      </div></div>
+    </div>
+    <div class="col-12 col-lg-6">
+      <div class="card h-100"><div class="card-body">
+        <h2 class="h6 mb-3">Students by major</h2>
+        <div style="height: 260px;"><canvas id="dash-chart-jurusan" role="img" aria-label="Students by major"></canvas></div>
+      </div></div>
+    </div>
+    <div class="col-12 col-xl-8">
+      <div class="card h-100"><div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-3">
+          <h2 class="h6 mb-0">Score distribution</h2>
+          <p class="small text-body-secondary mb-0">
+            Average <span data-score-stat="avg">&mdash;</span> &middot;
+            Count <span data-score-stat="count">&mdash;</span> &middot;
+            Min <span data-score-stat="min">&mdash;</span> &middot;
+            Max <span data-score-stat="max">&mdash;</span>
+          </p>
+        </div>
+        <div style="height: 260px;"><canvas id="dash-chart-nilai" role="img" aria-label="Score distribution"></canvas></div>
+      </div></div>
+    </div>
+  </div>
+
+  {{- /* Quiz list — rows rendered by JS from payload.quizzes (the backend no
+         longer sends a server-side Table/Quizzes range for this page). */ -}}
+  <div class="card mb-4">
+    <div class="card-body">
+      <h2 class="h6 mb-3">Quizzes</h2>
+      <div class="table-responsive" style="max-height: 24rem; overflow-y: auto;">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Title</th>
+              <th scope="col">Code</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="text-end">Finished</th>
+            </tr>
+          </thead>
+          <tbody id="dash-quiz-rows">
+            <tr><td colspan="4" class="text-body-secondary">Loading&hellip;</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{- /* SSR state blob (template.JS, same pattern as monitor.html /
+       workspace.html) + vendored Chart.js + this page's script. */ -}}
+<script type="application/json" id="teacher-overview-data">{{.OverviewJSON}}</script>
+<script src="{{asset "/assets/chartjs/chart.umd.min.js"}}"></script>
+<script src="{{asset "/js/teacher_dashboard.js"}}"></script>
+{{template "app_foot" .}}{{end}}

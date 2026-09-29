@@ -1,0 +1,51 @@
+{{define "page-teacher-quiz-list"}}{{template "app_head" .}}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Quizzes</h1>
+  <a class="btn btn-primary" href="/teacher/quiz/new"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i>New quiz</a>
+</div>
+{{template "table-toolbar" .}}
+<div class="btn-group btn-group-sm mb-3" role="group" aria-label="Filter by status">
+  <a class="btn {{if not .Status}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz{{if .Table.Q}}?q={{urlquery .Table.Q}}{{end}}">All</a>
+  <a class="btn {{if eq .Status "aktif"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz?status=aktif{{if .Table.Q}}&q={{urlquery .Table.Q}}{{end}}">Active</a>
+  <a class="btn {{if eq .Status "berjalan"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz?status=berjalan{{if .Table.Q}}&q={{urlquery .Table.Q}}{{end}}">Running</a>
+  <a class="btn {{if eq .Status "selesai"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz?status=selesai{{if .Table.Q}}&q={{urlquery .Table.Q}}{{end}}">Finished</a>
+  <a class="btn {{if eq .Status "nonaktif"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz?status=nonaktif{{if .Table.Q}}&q={{urlquery .Table.Q}}{{end}}">Not active</a>
+</div>
+{{- /* #table-results is the toolbar live-search swap target: filter links,
+       empty state, rows and pagination re-render together. */ -}}
+<div id="table-results">
+{{if not .Table.Total}}
+<p class="text-body-secondary">{{if or .Table.Q .Table.Params}}No results match your search.{{else}}No quizzes yet — create your first one.{{end}}</p>
+{{else}}
+<div class="card">
+  <div class="card-body">
+    <table class="table align-middle mb-0">
+      <thead>
+        <tr><th>Title</th><th>Code</th><th>Status</th><th>Timer</th><th>Created</th><th class="text-end">Open</th></tr>
+      </thead>
+      <tbody>
+        {{range .Quizzes}}
+        <tr>
+          <td>{{.Judul}}</td>
+          <td><code>{{.Code}}</code></td>
+          <td><span class="{{.Chip}}">{{.Label}}</span></td>
+          <td>{{if eq .TimerType "global"}}Global{{else if eq .TimerType "tanpa_timer"}}No timer{{else}}Per question{{end}}</td>
+          <td>{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
+          <td class="text-end text-nowrap">
+            <a class="btn btn-sm btn-outline-secondary" href="/teacher/quiz/{{.ID}}" title="Manage" aria-label="Manage" data-bs-toggle="tooltip"><i class="bi bi-pencil-square" aria-hidden="true"></i></a>
+            <button type="button" class="btn btn-sm btn-outline-danger" title="Hapus" aria-label="Hapus" data-bs-toggle="tooltip"
+                    data-post="/teacher/quiz/{{.ID}}/delete"
+                    data-confirm="Hapus quiz &quot;{{.Judul}}&quot;? Quiz yang sudah punya peserta tidak bisa dihapus."
+                    data-success="Quiz &quot;{{.Judul}}&quot; deleted successfully."><i class="bi bi-trash3" aria-hidden="true"></i></button>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{template "table-pagination" .}}
+{{end}}
+</div>{{/* /#table-results */}}
+<script src="{{asset "/js/teacher.js"}}"></script>
+{{template "app_foot" .}}{{end}}

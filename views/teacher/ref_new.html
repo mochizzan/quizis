@@ -1,0 +1,24 @@
+{{define "page-teacher-ref-new"}}{{template "app_head" .}}
+{{- /* Standalone create form for the reference dropdowns, shared by
+       /teacher/classes/new and /teacher/majors/new (mirrors refs.html's
+       shared approach). The action/data-next come from the page (Action);
+       on success teacher.js follows data-next back to the read-only list
+       with the stored success toast ({nama} filled from the form). */ -}}
+<h1 class="h4 mb-3">{{.Title}}</h1>
+<div class="card">
+  <div class="card-body">
+    <form action="{{.Action}}" method="post" data-fetch data-next="{{.Action}}"
+          data-success="New {{if eq .Kind "kelas"}}class{{else}}major{{end}} &quot;{nama}&quot; added.">
+      <div class="mb-3">
+        <label class="form-label" for="nama">{{.NameLabel}}</label>
+        <input class="form-control" id="nama" name="nama" maxlength="50" required>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add</button>
+        <a class="btn btn-outline-secondary" href="{{.Action}}"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+<script src="{{asset "/js/teacher.js"}}"></script>
+{{template "app_foot" .}}{{end}}

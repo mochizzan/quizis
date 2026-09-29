@@ -1,0 +1,111 @@
+{{define "settings-fields"}}
+<div class="row g-3">
+  <div class="col-12">
+    <label class="form-label" for="judul">Title</label>
+    <input class="form-control" id="judul" name="judul" maxlength="150" required value="{{.Quiz.Judul}}">
+  </div>
+  <div class="col-12">
+    <label class="form-label" for="deskripsi">Description</label>
+    <textarea class="form-control" id="deskripsi" name="deskripsi" rows="2">{{.Quiz.Deskripsi}}</textarea>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label" for="timer_type">Timer</label>
+    <select class="form-select" id="timer_type" name="timer_type">
+      <option value="global" {{if eq .Quiz.TimerType "global"}}selected{{end}}>Global — one deadline for the whole quiz</option>
+      <option value="per_soal" {{if eq .Quiz.TimerType "per_soal"}}selected{{end}}>Per question — each question gets its own timer</option>
+      <option value="tanpa_timer" {{if eq .Quiz.TimerType "tanpa_timer"}}selected{{end}}>No timer — students answer without any countdown</option>
+    </select>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label" for="join_mode">Join mode</label>
+    <select class="form-select" id="join_mode" name="join_mode">
+      <option value="open" {{if eq .Quiz.JoinMode "open"}}selected{{end}}>Open — students join instantly</option>
+      <option value="approve" {{if eq .Quiz.JoinMode "approve"}}selected{{end}}>Approval — teacher admits each student</option>
+    </select>
+  </div>
+  <div class="col-md-4" id="total_seconds_field">
+    <label class="form-label" for="total_seconds">Total time (seconds)</label>
+    <input class="form-control" id="total_seconds" name="total_seconds" type="number" min="0" value="{{.Quiz.TotalSeconds}}">
+  </div>
+  <div class="col-md-4" id="per_question_seconds_field">
+    <label class="form-label" for="per_question_seconds">Seconds per question</label>
+    <input class="form-control" id="per_question_seconds" name="per_question_seconds" type="number" min="0" value="{{.Quiz.PerQuestionSeconds}}">
+  </div>
+  <div class="col-md-4">
+    <label class="form-label" for="max_attempts">Attempts</label>
+    <input class="form-control" id="max_attempts" name="max_attempts" type="number" min="1" value="{{.Quiz.MaxAttempts}}">
+    <div class="form-text">Global-timer quizzes always allow 1 attempt.</div>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label" for="question_review">Question review after finishing</label>
+    <select class="form-select" id="question_review" name="question_review">
+      <option value="none" {{if eq .Quiz.QuestionReview "none"}}selected{{end}}>None</option>
+      <option value="text" {{if eq .Quiz.QuestionReview "text"}}selected{{end}}>Questions + own answers</option>
+      <option value="full" {{if eq .Quiz.QuestionReview "full"}}selected{{end}}>Full — with correct answers</option>
+    </select>
+  </div>
+  <div class="col-12 d-flex flex-wrap gap-4">
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="shuffle_questions" name="shuffle_questions" value="1" {{if .Quiz.ShuffleQuestions}}checked{{end}}>
+      <label class="form-check-label" for="shuffle_questions">Shuffle question order</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="shuffle_options" name="shuffle_options" value="1" {{if .Quiz.ShuffleOptions}}checked{{end}}>
+      <label class="form-check-label" for="shuffle_options">Shuffle answer options</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="show_correct_wrong" name="show_correct_wrong" value="1" {{if .Quiz.ShowCorrectWrong}}checked{{end}}>
+      <label class="form-check-label" for="show_correct_wrong">Show correct/wrong after answering</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="show_final_score" name="show_final_score" value="1" {{if .Quiz.ShowFinalScore}}checked{{end}}>
+      <label class="form-check-label" for="show_final_score">Show final score</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="ranking_live" name="ranking_live" value="1" {{if .Quiz.RankingLive}}checked{{end}}>
+      <label class="form-check-label" for="ranking_live">Live ranking</label>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  "use strict";
+  // The seconds fields follow the selected timer type — never show both.
+  // Inputs are hidden with d-none (never disabled: a disabled input would
+  // drop out of FormData and the server would 400 on the empty value).
+  var sel = document.getElementById("timer_type");
+  var form = sel ? sel.closest("form") : null;
+  var totalField = document.getElementById("total_seconds_field");
+  var perQField = document.getElementById("per_question_seconds_field");
+  if (!form || !totalField || !perQField) return;
+
+  function syncTimerFields() {
+    var type = sel.value;
+    totalField.classList.toggle("d-none", type !== "global");
+    perQField.classList.toggle("d-none", type !== "per_soal");
+  }
+  sel.addEventListener("change", syncTimerFields);
+  syncTimerFields(); // partial renders preselected on both create and edit pages
+
+  // Client-side pre-submit guard. This form-level listener fires while the
+  // event bubbles, i.e. BEFORE teacher.js's document-level data-fetch
+  // handler, so stopping it here cancels the request outright.
+  form.addEventListener("submit", function (ev) {
+    var msg = "";
+    if (sel.value === "global") {
+      if (!(Number(document.getElementById("total_seconds").value) >= 1)) {
+        msg = "Enter the total time in seconds.";
+      }
+    } else if (sel.value === "per_soal") {
+      if (!(Number(document.getElementById("per_question_seconds").value) >= 1)) {
+        msg = "Enter the seconds per question.";
+      }
+    }
+    if (!msg) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (window.quizToast) window.quizToast("danger", msg);
+  });
+})();
+</script>
+{{end}}

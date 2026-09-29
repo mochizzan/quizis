@@ -1,0 +1,105 @@
+{{define "join-panel"}}
+{{- /* Shared join block for /join (public) and /student (murid dashboard).
+       The code form renders for every visitor. A guest submission stores the
+       code in a short-lived pending_join cookie and continues to /login —
+       after signing in (or registering) the server lands back on
+       /join?code=... and the join runs itself, no retyping.
+       The active-quiz list renders ONLY when the handler opts in with
+       ShowActive (the murid dashboard): the public page may never leak quiz
+       names, codes or participant counts. */ -}}
+<div class="row g-4 align-items-start">
+  <div class="{{if .ShowActive}}col-lg-5{{else}}col-xl-6 mx-auto{{end}}">
+    <div class="card">
+      <div class="card-body">
+        {{if .ShowActive}}<h2 class="h5 mb-3">Join with a code</h2>{{else}}<h1 class="h5 mb-3">Join with a code</h1>{{end}}
+        <form id="join-form" class="row g-2 align-items-end" novalidate{{if eq .Role "murid"}} data-authed="1"{{end}}>
+          <div class="col-sm-8">
+            <label class="form-label" for="code">Join code</label>
+            <input class="form-control text-uppercase" id="code" name="code" maxlength="6" placeholder="ABC123" autocomplete="off" required>
+          </div>
+          <div class="col-sm-4">
+            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-door-open me-1" aria-hidden="true"></i>Join quiz</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {{if .ShowActive}}
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h5 mb-3"><i class="bi bi-broadcast me-2" aria-hidden="true"></i>Active quizzes</h2>
+        <ul class="list-group list-group-flush">
+          {{range .Quizzes}}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>{{.Judul}}</span>
+            <span class="text-body-secondary small">
+              <code>{{.Code}}</code>
+              <span class="{{.Chip}} ms-2">{{.Label}}</span>
+            </span>
+          </li>
+          {{else}}
+          <li class="list-group-item text-body-secondary">No quizzes are open right now. Ask your teacher for a join code.</li>
+          {{end}}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {{end}}
+</div>
+
+<script>
+(function () {
+  var form = document.getElementById("join-form");
+  if (!form) return;
+  var input = document.getElementById("code");
+  var authed = form.dataset.authed === "1";
+
+  function submitCode(code) {
+    fetch("/join", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: code })
+    }).then(function (res) { return res.json(); }).then(function (body) {
+      if (body.ok) { location.href = body.data.redirect; return; }
+      if (window.quizToast) quizToast("danger", body.message || "Could not join that quiz.");
+      else console.error(body.message || "Could not join that quiz.");
+    }).catch(function () {
+      if (window.quizToast) quizToast("danger", "Could not join that quiz.");
+      else console.error("Could not join that quiz.");
+    });
+  }
+
+  // Guest: remember the code server-side, then sign in — startSession picks
+  // the cookie up and lands back on /join?code=... for the auto-join.
+  function saveAndSignIn(code) {
+    document.cookie = "pending_join=" + encodeURIComponent(code) + "; path=/; max-age=1800";
+    location.href = "/login";
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var code = (input.value || "").trim().toUpperCase();
+    if (code.length !== 6) {
+      if (window.quizToast) quizToast("danger", "Enter the 6-character join code.");
+      input.focus();
+      return;
+    }
+    if (authed) submitCode(code);
+    else saveAndSignIn(code);
+  });
+
+  // /join?code=... — the server sent a signed-in murid here with the code
+  // saved before sign-in; run the join without asking again.
+  var pending = new URLSearchParams(location.search).get("code");
+  if (pending) {
+    pending = pending.trim().toUpperCase();
+    input.value = pending;
+    if (authed) {
+      if (history.replaceState) history.replaceState(null, "", location.pathname);
+      submitCode(pending);
+    }
+  }
+})();
+</script>
+{{end}}

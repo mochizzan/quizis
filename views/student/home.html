@@ -1,0 +1,33 @@
+{{define "page-student-home"}}{{template "app_head" .}}
+<header class="mb-4">
+  <p class="text-body-secondary small mb-1">Murid</p>
+  <h1 class="h4 mb-0">Beranda</h1>
+</header>
+{{template "join-panel" .}}
+{{- /* Ongoing-quiz notice (spec §7 home): sign-in lands on this dashboard,
+       so a murid who walked out of a running attempt is told here and can
+       jump straight back. Only rendered while an attempt is actually open
+       (handler sets .ActiveQuiz). */ -}}
+{{with .ActiveQuiz}}
+<div class="modal fade" id="active-quiz-modal" tabindex="-1" role="dialog"
+     aria-modal="true" aria-labelledby="active-quiz-modal-title" aria-hidden="true"
+     data-ssr-modal>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5" id="active-quiz-modal-title">Ongoing quiz</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        You are still in the quiz <strong>{{.Judul}}</strong> and it is running
+        right now. Your answers are saved &mdash; return before it ends.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Stay here</button>
+        <a class="btn btn-primary" href="/quiz/{{.Code}}"><i class="bi bi-arrow-right me-1" aria-hidden="true"></i>Return to quiz</a>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
+{{template "app_foot" .}}{{end}}

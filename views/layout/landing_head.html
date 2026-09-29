@@ -1,0 +1,46 @@
+{{define "landing_head"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{with .Title}}{{.}} — {{end}}Quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Cypro+Minoan&display=swap">
+<link rel="stylesheet" href="{{asset "/bootstrap/css/bootstrap.min.css"}}">
+<link rel="stylesheet" href="{{asset "/assets/bootstrap-icons/bootstrap-icons.css"}}">
+<link rel="stylesheet" href="{{asset "/assets/theme.css"}}">
+<link rel="stylesheet" href="{{asset "/css/app.css"}}">
+<script>try{var t=localStorage.getItem("theme");if(t){document.documentElement.setAttribute("data-bs-theme",t);}}catch(e){}</script>
+<script src="{{asset "/js/theme.js"}}" defer></script>
+<script src="{{asset "/js/ui.js"}}" defer></script>
+</head>
+<body>
+{{- /* Public chrome: exactly three menus (Home, Join quiz, About) plus the
+       profile icon — anonymous → /login, murid → /student, guru → /teacher. */}}
+{{template "feedback-toasts" .}}
+<nav class="navbar navbar-expand-lg landing-nav border-bottom">
+  <div class="container">
+    <a class="navbar-brand fw-bold d-inline-flex align-items-center gap-2" href="/"><span class="brand-mark">Q</span>Quiz</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#landingNav"
+            aria-controls="landingNav" aria-expanded="false" aria-label="Toggle navigation"
+            title="Toggle navigation" data-quiz-tooltip data-bs-placement="bottom">
+      <i class="bi bi-list" aria-hidden="true"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="landingNav">
+      <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
+        <li class="nav-item"><a class="nav-link{{if eq .Nav "home"}} active{{end}}" href="/"{{if eq .Nav "home"}} aria-current="page"{{end}}>Home</a></li>
+        <li class="nav-item"><a class="nav-link{{if eq .Nav "join"}} active{{end}}" href="/join"{{if eq .Nav "join"}} aria-current="page"{{end}}>Join quiz</a></li>
+        <li class="nav-item"><a class="nav-link{{if eq .Nav "about"}} active{{end}}" href="/about"{{if eq .Nav "about"}} aria-current="page"{{end}}>About</a></li>
+      </ul>
+      <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-theme-toggle
+                title="Toggle theme" aria-label="Toggle theme"
+                data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-circle-half" aria-hidden="true"></i></button>
+        {{template "profile-link" .}}
+      </div>
+    </div>
+  </div>
+</nav>
+<main>
+{{end}}

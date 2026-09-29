@@ -1,0 +1,314 @@
+/* app.css — layout chrome only: the landing page and the sidebar dashboards.
+   The dashboard sidebar is a fixed navy rail (identical in both themes);
+   everything else comes from theme.css / Bootstrap --bs-* tokens (light + dark),
+   with the two semantic accents staying in theme.css. Spacing follows a 0.25rem scale. */
+
+/* --- shared bits ------------------------------------------------------- */
+
+.brand-mark {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.625rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  flex: 0 0 auto;
+  background-color: var(--bs-body-color);
+  color: var(--bs-body-bg);
+}
+.app-avatar {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* --- app shell (dashboard with sidebar) -------------------------------- */
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  align-items: stretch;
+}
+
+.app-sidebar {
+  flex: 0 0 15rem;
+  width: 15rem;
+  --bs-offcanvas-bg: #10233F;
+  --bs-offcanvas-color: #C4E2F5;
+  --bs-offcanvas-border-color: rgba(196, 226, 245, 0.16);
+}
+.app-sidebar-body {
+  display: flex;
+  flex-direction: column;
+}
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  color: #E7F2FB;
+  text-decoration: none;
+}
+.app-sidebar .brand-mark {
+  background-color: #C4E2F5;
+  color: #10233F;
+}
+.app-sidebar .nav-link {
+  color: rgba(196, 226, 245, 0.75);
+  border-radius: 9999px;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.9375rem;
+}
+.app-sidebar .nav-link:hover {
+  color: #E7F2FB;
+  background-color: rgba(75, 184, 250, 0.16);
+}
+.app-sidebar .nav-link.active,
+.app-sidebar .nav-link.active:hover {
+  color: #10233F;
+  background-color: #4BB8FA;
+  font-weight: 600;
+}
+.app-sidebar-foot .nav-link {
+  color: rgba(196, 226, 245, 0.75);
+}
+
+/* ≥lg: the offcanvas becomes a static, sticky column (design: dark left
+   sidebar ~240px, always visible). !important outranks Bootstrap's
+   offcanvas fixed/hidden base rules. */
+@media (min-width: 992px) {
+  .app-sidebar {
+    position: sticky !important;
+    top: 0;
+    bottom: auto;
+    height: 100vh;
+    width: 15rem !important;
+    transform: none !important;
+    visibility: visible !important;
+    z-index: auto;
+    overflow-y: auto;
+    background-color: #10233F !important;
+    border-right: 1px solid rgba(196, 226, 245, 0.16);
+  }
+}
+
+.app-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.app-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: var(--bs-body-bg);
+  border-bottom: 1px solid var(--bs-border-color);
+}
+.app-topbar-brand {
+  color: var(--bs-body-color);
+  text-decoration: none;
+  font-weight: 600;
+}
+.app-content {
+  flex: 1 1 auto;
+  padding: 1.5rem 1.25rem 3rem;
+  max-width: 90rem;
+}
+@media (min-width: 992px) {
+  .app-content {
+    padding: 2rem 2rem 3.5rem;
+  }
+}
+
+/* --- landing page ------------------------------------------------------ */
+
+.landing-nav {
+  padding: 0.5rem 0;
+}
+.landing-nav .nav-link {
+  font-weight: 500;
+  border-radius: 9999px;
+  padding: 0.375rem 0.875rem;
+}
+.landing-hero {
+  padding: 3rem 0;
+}
+@media (min-width: 992px) {
+  .landing-hero {
+    padding: 5rem 0 4.5rem;
+  }
+}
+.hero-title {
+  font-size: clamp(2.25rem, 4.5vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  margin-bottom: 1rem;
+}
+.hero-title .hero-muted {
+  color: var(--bs-secondary-color);
+}
+.hero-lead {
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--bs-secondary-color);
+  max-width: 34rem;
+}
+.hero-micro {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--bs-secondary-color);
+  font-size: 0.875rem;
+}
+.hero-micro li::before {
+  content: "\2022";
+  margin-right: 0.5rem;
+  color: var(--bs-body-color);
+}
+.hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+}
+
+.mock-card {
+  background-color: var(--bs-tertiary-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 1rem;
+  box-shadow: 0 10px 25px -5px rgba(15, 34, 64, 0.05),
+              0 8px 10px -6px rgba(15, 34, 64, 0.05);
+  padding: 1.25rem;
+}
+.mock-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--bs-secondary-color);
+}
+.mock-chip {
+  font-size: 0.75rem;
+  border-radius: 9999px;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--bs-border-color);
+  color: var(--bs-body-color);
+}
+.mock-option {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.9375rem;
+  background-color: var(--bs-body-bg);
+}
+.mock-option.is-picked {
+  border-color: var(--bs-body-color);
+  font-weight: 600;
+}
+.mock-option .mock-letter {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  border: 1px solid var(--bs-border-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  flex: 0 0 auto;
+}
+.mock-rank {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  padding: 0.375rem 0;
+  border-bottom: 1px dashed var(--bs-border-color);
+}
+.mock-rank:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.landing-section {
+  padding: 2.5rem 0;
+}
+.promo-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem 1.5rem;
+  text-align: center;
+  background-color: var(--bs-tertiary-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 1rem;
+  padding: 1.25rem 1.5rem;
+}
+.capability-strip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem 2rem;
+  color: var(--bs-secondary-color);
+  font-size: 0.875rem;
+}
+.landing-footer {
+  border-top: 1px solid var(--bs-border-color);
+  padding: 2rem 0;
+  color: var(--bs-secondary-color);
+  font-size: 0.875rem;
+}
+
+/* --- student history status filter ------------------------------------- */
+/* self-scroll: the btn-group stays single-row, so Bootstrap's
+   :not(:first-child) border/radius rules keep the joined-pill look;
+   max-width traps any overflow inside the group so it can never push
+   horizontal scroll onto the document at mobile widths */
+.history-filter {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* --- teacher monitor: answer pulse -------------------------------------- */
+/* monitor.js stamps .card-pulse onto the .col-[data-pid] wrapper for ~0.7s
+   on every answer SSE event (re-armed per answer, re-applied on each card
+   rebuild). Only transform + box-shadow animate — no reflow, no size change;
+   colors come from Bootstrap tokens, never raw hex. */
+@keyframes monitor-card-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(var(--bs-primary-rgb), 0.4);
+  }
+  60% {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 0.375rem rgba(var(--bs-primary-rgb), 0.15);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(var(--bs-primary-rgb), 0);
+  }
+}
+.card-pulse .card {
+  animation: monitor-card-pulse 0.7s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-pulse .card {
+    animation: none;
+  }
+}
