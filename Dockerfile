@@ -8,9 +8,10 @@ RUN CGO_ENABLED=0 go build -o /out/server ./cmd/server
 FROM alpine:3.24
 WORKDIR /app
 COPY --from=build /out/server /app/server
-# brings .env if present, plus .env.example
+# app payload (views/, web/, …). .env NEVER enters the image (.dockerignore):
+# config arrives at run time — compose injects .env.example then .env through
+# env_file, and environment: outranks both. A clean machine without a .env
+# still boots on the injected .env.example (§11.19).
 COPY . /app/
-# clean machine has no .env: fall back to the template so boot succeeds (§11.19)
-RUN [ -f /app/.env ] || cp /app/.env.example /app/.env
 EXPOSE 8090
 CMD ["/app/server"]

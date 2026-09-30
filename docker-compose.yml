@@ -3,8 +3,20 @@ services:
     build: .
     image: ghcr.io/mochizzan/quizis:latest
     ports: ["8090:8090"]
+    # Runtime config — the image carries no .env (dockerignored), so compose
+    # POINTS AT the host's files here: template first, the host's .env second
+    # (a later env_file wins). Every value change happens in .env alone →
+    # `docker compose up -d app`, no compose edit, no rebuild. Local and
+    # production hosts each supply their own .env behind the same image.
+    env_file:
+      - path: .env.example
+        required: false
+      - path: .env
+        required: false
     environment:
-      DB_HOST: db          # absent from .env, so this survives cleanenv
+      # The only value NOT from .env: DB_HOST is deliberately absent there
+      # (local `go run` uses the 127.0.0.1 default; Docker needs `db`).
+      DB_HOST: db
     depends_on:
       db:
         condition: service_healthy

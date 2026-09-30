@@ -1,3 +1,5 @@
 .git
 data
 docs
+# secrets never enter the image — compose injects env at run time (env_file)
+.env

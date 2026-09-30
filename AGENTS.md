@@ -96,7 +96,7 @@ Migrations apply automatically at boot — never run them by hand.
 ## Important Files
 
 - `cmd/server/main.go` — entry point, middleware chain, entire route table
-- `internal/config/config.go` — cleanenv tags = full env surface; `CONFIG_PATH` overrides `.env`; precedence file → OS env → defaults; `DB_HOST` deliberately env-default only so compose's `DB_HOST=db` wins; `DSN()` uses `parseTime=true&charset=utf8mb4&loc=UTC`
+- `internal/config/config.go` — cleanenv tags = full env surface; `CONFIG_PATH` overrides `.env`; precedence file → OS env → defaults — but the file is **optional**: containers carry no `.env` (`.dockerignore`), compose `env_file` injects the host's `.env.example` then `.env` at run time and `environment:` outranks both; `DB_HOST` deliberately env-default only so compose's `DB_HOST=db` wins; `DSN()` uses `parseTime=true&charset=utf8mb4&loc=UTC`
 - `internal/handlers/respond.go` — JSON envelope + error-code contract
 - `internal/handlers/global.go` — `closeQuiz` (single end-trigger), `WatchLoop`/`WatchOnce`, `Rehydrate`
 - `internal/handlers/renderer.go` — template rendering + injected nav/crumb payload
