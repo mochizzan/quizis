@@ -3,10 +3,10 @@
   <div class="col-sm-10 col-md-7 col-lg-5">
     <div class="card">
       <div class="card-body p-4">
-        <h1 class="h5 mb-3">Register</h1>
+        <h1 class="h5 mb-3">Daftar</h1>
         <form action="/register" method="post">
           <div class="mb-3">
-            <label class="form-label" for="nama_lengkap">Full name</label>
+            <label class="form-label" for="nama_lengkap">Nama lengkap</label>
             <input class="form-control" id="nama_lengkap" name="nama_lengkap" value="{{.Nama}}" required>
           </div>
           <div class="row">
@@ -20,28 +20,28 @@
             </div>
           </div>
           <div class="mb-3">
-            <label class="form-label" for="password">Password</label>
+            <label class="form-label" for="password">Kata sandi</label>
             <input class="form-control" id="password" name="password" type="password" autocomplete="new-password" minlength="8" required>
-            <div class="form-text">At least 8 characters.</div>
+            <div class="form-text">Minimal 8 karakter.</div>
           </div>
           <div class="row">
             <div class="col-sm-6 mb-3">
-              <label class="form-label" for="kelas_id">Class</label>
+              <label class="form-label" for="kelas_id">Kelas</label>
               <select class="form-select" id="kelas_id" name="kelas_id" required>
                 {{range .Classes}}<option value="{{.ID}}">{{.Nama}}</option>{{end}}
               </select>
             </div>
             <div class="col-sm-6 mb-3">
-              <label class="form-label" for="jurusan_id">Major</label>
+              <label class="form-label" for="jurusan_id">Jurusan</label>
               <select class="form-select" id="jurusan_id" name="jurusan_id" required>
                 {{range .Majors}}<option value="{{.ID}}">{{.Nama}}</option>{{end}}
               </select>
             </div>
           </div>
-          <button class="btn btn-primary w-100" type="submit"><i class="bi bi-person-plus me-2" aria-hidden="true"></i>Create account</button>
+          <button class="btn btn-primary w-100" type="submit"><i class="bi bi-person-plus me-2" aria-hidden="true"></i>Buat akun</button>
         </form>
         <div class="mt-3">
-          <a href="/login">Sign in</a>
+          <a href="/login">Masuk</a>
         </div>
       </div>
     </div>

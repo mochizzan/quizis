@@ -2,13 +2,13 @@
 {{- /* Sidebar navigation. Role decides the whole menu (fail closed: an
        unknown role renders no menu), Nav is the active key injected by the
        renderer from the request path. */ -}}
-<nav id="app-sidebar" class="app-sidebar offcanvas offcanvas-start" tabindex="-1" aria-label="Main menu">
+<nav id="app-sidebar" class="app-sidebar offcanvas offcanvas-start" tabindex="-1" aria-label="Menu utama">
   <div class="offcanvas-header d-lg-none">
     <span class="app-brand">
       <span class="brand-mark">Q</span>
       <span class="fw-semibold">Quiz</span>
     </span>
-    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Tutup"></button>
   </div>
   <div class="offcanvas-body app-sidebar-body">
     {{- /* Role-aware brand: the app shell links the role dashboard, never the
@@ -19,13 +19,13 @@
     </a>
     {{if eq .Role "guru"}}
     <ul class="nav nav-pills flex-column gap-1 mt-3 mt-lg-4">
-      <li class="nav-item"><a class="nav-link{{if eq .Nav "dashboard"}} active{{end}}" href="/teacher"{{if eq .Nav "dashboard"}} aria-current="page"{{end}}><i class="bi bi-speedometer2 me-2" aria-hidden="true"></i>Dashboard</a></li>
-      <li class="nav-item"><a class="nav-link{{if eq .Nav "quizzes"}} active{{end}}" href="/teacher/quiz"{{if eq .Nav "quizzes"}} aria-current="page"{{end}}><i class="bi bi-clipboard2-check me-2" aria-hidden="true"></i>Quiz</a></li>
-      <li class="nav-item"><a class="nav-link{{if eq .Nav "questions"}} active{{end}}" href="/teacher/questions"{{if eq .Nav "questions"}} aria-current="page"{{end}}><i class="bi bi-patch-question me-2" aria-hidden="true"></i>Question Bank</a></li>
-      <li class="nav-item"><a class="nav-link{{if eq .Nav "classes"}} active{{end}}" href="/teacher/classes"{{if eq .Nav "classes"}} aria-current="page"{{end}}><i class="bi bi-people me-2" aria-hidden="true"></i>Classes</a></li>
-      <li class="nav-item"><a class="nav-link{{if eq .Nav "majors"}} active{{end}}" href="/teacher/majors"{{if eq .Nav "majors"}} aria-current="page"{{end}}><i class="bi bi-mortarboard me-2" aria-hidden="true"></i>Majors</a></li>
-      <li class="nav-item"><a class="nav-link{{if eq .Nav "students"}} active{{end}}" href="/teacher/students"{{if eq .Nav "students"}} aria-current="page"{{end}}><i class="bi bi-person-gear me-2" aria-hidden="true"></i>Manage Akun Murid</a></li>
-      <li class="nav-item"><a class="nav-link{{if eq .Nav "resets"}} active{{end}}" href="/teacher/password-resets"{{if eq .Nav "resets"}} aria-current="page"{{end}}><i class="bi bi-key me-2" aria-hidden="true"></i>Reset Password</a></li>
+      <li class="nav-item"><a class="nav-link{{if eq .Nav "dashboard"}} active{{end}}" href="/teacher"{{if eq .Nav "dashboard"}} aria-current="page"{{end}}><i class="bi bi-speedometer2 me-2" aria-hidden="true"></i>Dasbor</a></li>
+      <li class="nav-item"><a class="nav-link{{if eq .Nav "quizzes"}} active{{end}}" href="/teacher/quiz"{{if eq .Nav "quizzes"}} aria-current="page"{{end}}><i class="bi bi-clipboard2-check me-2" aria-hidden="true"></i>Kuis</a></li>
+      <li class="nav-item"><a class="nav-link{{if eq .Nav "questions"}} active{{end}}" href="/teacher/questions"{{if eq .Nav "questions"}} aria-current="page"{{end}}><i class="bi bi-patch-question me-2" aria-hidden="true"></i>Bank pertanyaan</a></li>
+      <li class="nav-item"><a class="nav-link{{if eq .Nav "classes"}} active{{end}}" href="/teacher/classes"{{if eq .Nav "classes"}} aria-current="page"{{end}}><i class="bi bi-people me-2" aria-hidden="true"></i>Kelas</a></li>
+      <li class="nav-item"><a class="nav-link{{if eq .Nav "majors"}} active{{end}}" href="/teacher/majors"{{if eq .Nav "majors"}} aria-current="page"{{end}}><i class="bi bi-mortarboard me-2" aria-hidden="true"></i>Jurusan</a></li>
+      <li class="nav-item"><a class="nav-link{{if eq .Nav "students"}} active{{end}}" href="/teacher/students"{{if eq .Nav "students"}} aria-current="page"{{end}}><i class="bi bi-person-gear me-2" aria-hidden="true"></i>Kelola akun murid</a></li>
+      <li class="nav-item"><a class="nav-link{{if eq .Nav "resets"}} active{{end}}" href="/teacher/password-resets"{{if eq .Nav "resets"}} aria-current="page"{{end}}><i class="bi bi-key me-2" aria-hidden="true"></i>Permintaan ganti kata sandi</a></li>
     </ul>
     {{else if eq .Role "murid"}}
     <ul class="nav nav-pills flex-column gap-1 mt-3 mt-lg-4">

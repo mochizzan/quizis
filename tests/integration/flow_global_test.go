@@ -35,7 +35,8 @@ func globalFixture(t *testing.T) (*httptest.Server, *handlers.Global, *sql.DB) {
 // linearQuiz builds an ACTIVE global-timer quiz with n pg questions
 // (correct answer = option 0 in every one).
 func linearQuiz(t *testing.T, ts *httptest.Server, pool *sql.DB, ck *http.Cookie,
-	title string, n int) (uint64, string, []uint64) {
+	title string, n int,
+) (uint64, string, []uint64) {
 	t.Helper()
 	quizID := createQuiz(t, ts, ck, quizForm(title))
 	qids := make([]uint64, 0, n)
@@ -178,7 +179,7 @@ func TestGlobalStartApproveFlow(t *testing.T) {
 	// approve arriving AFTER START → 409 (row gone or quiz moved on)
 	if resp, body := approve(pidC); resp.StatusCode != http.StatusConflict {
 		t.Fatalf("late approve = %d, want 409: %s", resp.StatusCode, body)
-	} else if env := decodeEnv(t, body); env.Message != "This request can no longer be approved." {
+	} else if env := decodeEnv(t, body); env.Message != "Permintaan ini tidak dapat disetujui lagi." {
 		t.Fatalf("late approve message = %q", env.Message)
 	}
 
@@ -208,7 +209,7 @@ func TestStartWithZeroParticipants(t *testing.T) {
 		t.Fatalf("quiz status = %s", got)
 	}
 	resp, body := getWith(t, fmt.Sprintf("%s/teacher/quiz/%d/monitor", ts.URL, quizID), ck)
-	if resp.StatusCode != http.StatusOK || !contains(body, "Nobody has joined yet.") {
+	if resp.StatusCode != http.StatusOK || !contains(body, "Belum ada yang bergabung.") {
 		t.Fatalf("empty monitor = %d: %s", resp.StatusCode, body)
 	}
 }
@@ -244,7 +245,7 @@ func TestStopTwiceClosesOnce(t *testing.T) {
 	for _, r := range []result{r1, r2} {
 		if r.status == http.StatusConflict {
 			env := decodeEnv(t, r.body)
-			if env.Message != "This quiz is not running." {
+			if env.Message != "Kuis ini tidak sedang berjalan." {
 				t.Fatalf("losing STOP message = %q", env.Message)
 			}
 		}

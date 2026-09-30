@@ -136,10 +136,10 @@ func (s *Student) HistoryPage(c *echo.Context) error {
 	page := listPage(c)
 	pageRows, page, _ := paginate(filtered, page)
 	tb := newTable(c, q, len(filtered), page)
-	tb.Placeholder = "Search quiz title…"
+	tb.Placeholder = "Cari judul kuis…"
 
 	return c.Render(http.StatusOK, "page-student-history", map[string]any{
-		"Title":             "History",
+		"Title":             "Riwayat",
 		"Rows":              pageRows,
 		"ShowScoreColumn":   showScoreColumn,
 		"ShowRankingColumn": showRankingColumn,
@@ -242,7 +242,7 @@ func (s *Student) HistoryDetail(c *echo.Context) error {
 	}
 	pid, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil || pid == 0 {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid attempt id.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "ID percobaan tidak valid.")
 	}
 	ctx := c.Request().Context()
 
@@ -261,7 +261,7 @@ func (s *Student) HistoryDetail(c *echo.Context) error {
 		Scan(&ownerID, &quizID, &status, &attemptNo, &qorder,
 			&auto, &final, &cheating, &judul, &review, &showScore, &showRank)
 	if errors.Is(err, sql.ErrNoRows) {
-		return fail(c, http.StatusNotFound, ErrNotFound, "Attempt not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Percobaan tidak ditemukan.")
 	}
 	if err != nil {
 		return err
@@ -269,7 +269,7 @@ func (s *Student) HistoryDetail(c *echo.Context) error {
 	// ownership (spec §7): another student's attempt is never readable
 	if ownerID != sess.UserID {
 		return fail(c, http.StatusForbidden, ErrForbidden,
-			"You are not allowed to view this attempt.")
+			"Anda tidak diizinkan melihat percobaan ini.")
 	}
 
 	// question order: qorder snapshot, falling back to the bank order
@@ -423,13 +423,13 @@ func (s *Student) ProfilePage(c *echo.Context) error {
 		return err
 	}
 	data := map[string]any{
-		"Title":   "Profile",
+		"Title":   "Profil",
 		"User":    u,
 		"Kelas":   kelas,
 		"Jurusan": jurusan,
 	}
 	if c.QueryParam("saved") == "1" {
-		data["Flash"] = flash("success", "Profile saved successfully.")
+		data["Flash"] = flash("success", "Profil berhasil disimpan.")
 	}
 	return c.Render(http.StatusOK, "page-student-profile", data)
 }
@@ -457,16 +457,16 @@ func (s *Student) EditProfile(c *echo.Context) error {
 			strconv.FormatUint(body.JurusanID, 10)
 	}
 	if nama == "" {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Full name is required.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Nama lengkap wajib diisi.")
 	}
 	if len([]rune(nama)) > 100 {
 		return fail(c, http.StatusBadRequest, ErrValidation,
-			"Full name must be at most 100 characters.")
+			"Nama lengkap maksimal 100 karakter.")
 	}
 	kelasID, err1 := strconv.ParseUint(kelasRaw, 10, 16)
 	jurusanID, err2 := strconv.ParseUint(jurusanRaw, 10, 16)
 	if err1 != nil || err2 != nil || kelasID == 0 || jurusanID == 0 {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid class or major.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Kelas atau jurusan tidak valid.")
 	}
 	ctx := c.Request().Context()
 	var exists bool
@@ -477,7 +477,7 @@ func (s *Student) EditProfile(c *echo.Context) error {
 		return err
 	}
 	if !exists {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid class or major.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Kelas atau jurusan tidak valid.")
 	}
 	if _, err := s.DB.ExecContext(ctx,
 		`UPDATE users SET nama_lengkap = ?, kelas_id = ?, jurusan_id = ? WHERE id = ?`,

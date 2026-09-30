@@ -48,8 +48,8 @@ func TestCreateQuizInvalidTimerType(t *testing.T) {
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("create = %d, want 400: %s", resp.StatusCode, body)
 	}
-	if env := decodeEnv(t, body); env.OK || env.Message != "Invalid timer type." {
-		t.Fatalf("envelope = %+v, want 400 Invalid timer type.", env)
+	if env := decodeEnv(t, body); env.OK || env.Message != "Jenis timer tidak valid." {
+		t.Fatalf("envelope = %+v, want 400 Jenis timer tidak valid.", env)
 	}
 }
 
@@ -79,7 +79,7 @@ func TestTanpaTimerStartAndFreeNavigation(t *testing.T) {
 	if resp.StatusCode != http.StatusConflict {
 		t.Fatalf("global START = %d, want 409: %s", resp.StatusCode, body)
 	}
-	if env := decodeEnv(t, body); env.Message != "This quiz has no timer." {
+	if env := decodeEnv(t, body); env.Message != "Kuis ini tanpa timer." {
 		t.Fatalf("global START message = %q", env.Message)
 	}
 

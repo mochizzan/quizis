@@ -2,25 +2,25 @@
 {{template "app_head" .}}
   <header class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
     <div>
-      <p class="text-body-secondary small mb-1">Results</p>
+      <p class="text-body-secondary small mb-1">Hasil</p>
       <h1 class="h3 mb-0">{{.Judul}}</h1>
     </div>
     <div class="d-flex gap-2 flex-wrap">
-      <a class="btn btn-outline-secondary" href="/teacher/quiz/{{.ID}}"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>Back to quiz</a>
-      {{if .HasEssay}}<a class="btn btn-outline-primary" href="/teacher/quiz/{{.ID}}/grading"><i class="bi bi-pencil me-2" aria-hidden="true"></i>Grade essays</a>{{end}}
-      <a class="btn btn-outline-secondary" href="/teacher/quiz/{{.ID}}/results/export?format=csv" title="Download CSV" aria-label="Download CSV" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-filetype-csv" aria-hidden="true"></i></a>
-      <a class="btn btn-outline-secondary" href="/teacher/quiz/{{.ID}}/results/export?format=xlsx" title="Download XLSX" aria-label="Download XLSX" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-filetype-xlsx" aria-hidden="true"></i></a>
+      <a class="btn btn-outline-secondary" href="/teacher/quiz/{{.ID}}"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>Kembali ke kuis</a>
+      {{if .HasEssay}}<a class="btn btn-outline-primary" href="/teacher/quiz/{{.ID}}/grading"><i class="bi bi-pencil me-2" aria-hidden="true"></i>Nilai esai</a>{{end}}
+      <a class="btn btn-outline-secondary" href="/teacher/quiz/{{.ID}}/results/export?format=csv" title="Unduh CSV" aria-label="Unduh CSV" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-filetype-csv" aria-hidden="true"></i></a>
+      <a class="btn btn-outline-secondary" href="/teacher/quiz/{{.ID}}/results/export?format=xlsx" title="Unduh XLSX" aria-label="Unduh XLSX" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-filetype-xlsx" aria-hidden="true"></i></a>
     </div>
   </header>
 
   {{template "results-tabs" (dict "ID" .ID "Active" "students")}}
 
   <section class="mb-4">
-    <h2 class="h5 mb-2"><i class="bi bi-collection me-2" aria-hidden="true"></i>Students</h2>
+    <h2 class="h5 mb-2"><i class="bi bi-collection me-2" aria-hidden="true"></i>Murid</h2>
     {{template "table-toolbar" .}}
-    <div class="btn-group btn-group-sm mb-3" role="group" aria-label="Sort order">
-      <a class="btn {{if not .Sort}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz/{{.ID}}/results{{if .Table.Q}}?q={{urlquery .Table.Q}}{{end}}">Score</a>
-      <a class="btn {{if eq .Sort "nama"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz/{{.ID}}/results?sort=nama{{if .Table.Q}}&q={{urlquery .Table.Q}}{{end}}">Name</a>
+    <div class="btn-group btn-group-sm mb-3" role="group" aria-label="Urutkan berdasarkan">
+      <a class="btn {{if not .Sort}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz/{{.ID}}/results{{if .Table.Q}}?q={{urlquery .Table.Q}}{{end}}">Nilai</a>
+      <a class="btn {{if eq .Sort "nama"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz/{{.ID}}/results?sort=nama{{if .Table.Q}}&q={{urlquery .Table.Q}}{{end}}">Nama</a>
     </div>
     {{- /* #table-results is the toolbar live-search swap target: sort links,
            empty state, rows and pagination re-render together. Each student
@@ -29,16 +29,16 @@
            so the row index must match .Panels. */ -}}
     <div id="table-results">
     {{if not .Table.Total}}
-    <p class="text-body-secondary">{{if or .Table.Q .Table.Params}}No results match your search.{{else}}Nobody has joined yet.{{end}}</p>
+    <p class="text-body-secondary">{{if or .Table.Q .Table.Params}}Tidak ada hasil yang cocok dengan pencarian Anda.{{else}}Belum ada yang bergabung.{{end}}</p>
     {{else}}
     <div class="table-responsive">
       <table class="table table-sm align-middle">
         <thead>
           <tr>
-            <th><span class="visually-hidden">Answers</span></th>
-            <th>Rank</th><th>Name</th><th>Username</th><th>Class</th><th>Major</th>
-            <th class="text-end">Score</th><th class="text-end">Correct</th>
-            <th>Status</th><th>Cheating</th><th class="text-end">Attempts</th>
+            <th><span class="visually-hidden">Jawaban</span></th>
+            <th>Peringkat</th><th>Nama</th><th>Username</th><th>Kelas</th><th>Jurusan</th>
+            <th class="text-end">Nilai</th><th class="text-end">Benar</th>
+            <th>Status</th><th>Kecurangan</th><th class="text-end">Percobaan</th>
           </tr>
         </thead>
         <tbody>
@@ -48,7 +48,7 @@
             <td class="text-nowrap">
               <button type="button" class="btn btn-sm btn-outline-secondary" data-answer-toggle
                       aria-expanded="false" aria-controls="answer-detail-{{$i}}"
-                      title="Show answers" aria-label="Show this student's answers"
+                      title="Tampilkan jawaban" aria-label="Tampilkan jawaban murid ini"
                       data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
             </td>
             <td>{{if gt $row.Rank 0}}{{$row.Rank}}{{else}}&mdash;{{end}}</td>
@@ -56,10 +56,10 @@
             <td>{{$row.Username}}</td>
             <td>{{$row.Class}}</td>
             <td>{{$row.Major}}</td>
-            <td class="text-end">{{if $row.Awaiting}}<span class="text-body-secondary">Awaiting grading</span>{{else}}{{$row.ScoreText}}{{end}}</td>
+            <td class="text-end">{{if $row.Awaiting}}<span class="text-body-secondary">Menunggu penilaian</span>{{else}}{{$row.ScoreText}}{{end}}</td>
             <td class="text-end">{{if $panel.Attempted}}{{$panel.Correct}}/{{$panel.Total}}{{else}}&mdash;{{end}}</td>
             <td>{{$row.Status}}</td>
-            <td>{{if $row.Cheating}}<span class="text-danger">yes</span>{{else}}no{{end}}</td>
+            <td>{{if $row.Cheating}}<span class="text-danger">ya</span>{{else}}tidak{{end}}</td>
             <td class="text-end">{{$row.Attempts}}</td>
           </tr>
           <tr class="d-none" id="answer-detail-{{$i}}">
@@ -68,8 +68,8 @@
                 <table class="table table-sm align-middle mb-0">
                   <thead>
                     <tr>
-                      <th>#</th><th>Question</th>
-                      <th class="text-nowrap">Answer</th><th class="text-nowrap">Correct answer</th><th>Status</th>
+                      <th>#</th><th>Pertanyaan</th>
+                      <th class="text-nowrap">Jawaban</th><th class="text-nowrap">Jawaban benar</th><th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -82,7 +82,7 @@
                       <td><span class="badge {{if eq .State "correct"}}text-bg-success{{else if eq .State "wrong"}}text-bg-danger{{else if eq .State "graded"}}text-bg-success{{else}}text-bg-secondary{{end}}">{{.Label}}</span></td>
                     </tr>
                     {{else}}
-                    <tr><td colspan="5" class="text-body-secondary">No questions yet.</td></tr>
+                    <tr><td colspan="5" class="text-body-secondary">Belum ada pertanyaan.</td></tr>
                     {{end}}
                   </tbody>
                 </table>

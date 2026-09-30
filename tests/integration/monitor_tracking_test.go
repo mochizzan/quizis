@@ -118,13 +118,13 @@ func TestWorkspacePageBeaconTracksMonitor(t *testing.T) {
 	}
 	resp, body := postJSON(t, ts.URL+"/quiz/"+code+"/page",
 		map[string]string{"page": "preview"}, reg)
-	assertFail(t, resp, body, http.StatusConflict, "CONFLICT", "Start the quiz first.")
+	assertFail(t, resp, body, http.StatusConflict, "CONFLICT", "Mulai kuis terlebih dahulu.")
 
 	// never joined at all → 404
 	resp, body = postJSON(t, ts.URL+"/quiz/"+code+"/page",
 		map[string]string{"page": "preview"}, stranger)
 	assertFail(t, resp, body, http.StatusNotFound, "NOT_FOUND",
-		"You are not a participant of this quiz.")
+		"Anda bukan peserta kuis ini.")
 
 	startAttempt(t, ts, code, st)
 	pid1, _, _ := participantRowFor(t, pool, quizID, userOf(t, ts, st))
@@ -190,7 +190,7 @@ func TestWorkspacePageBeaconTracksMonitor(t *testing.T) {
 	// unknown page name → 400 VALIDATION
 	resp, body = postJSON(t, ts.URL+"/quiz/"+code+"/page",
 		map[string]string{"page": "sideways"}, st)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Unknown page.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Halaman tidak dikenal.")
 
 	// free navigation: the left question enters the per-question ledger and
 	// the monitor follows current_q live (per_soal timer mode, spec §7)
@@ -273,10 +273,10 @@ func TestMonitorYellowCheatingCardsAndActions(t *testing.T) {
 	if n := strings.Count(body, `data-act="remove"`); n != 2 {
 		t.Errorf("keluarkan-dari-quiz buttons = %d, want 2 (only cheating cards)", n)
 	}
-	if !strings.Contains(body, `badge text-bg-danger">flagged<`) {
+	if !strings.Contains(body, `badge text-bg-danger">Ditandai<`) {
 		t.Error("flagged badge missing for the flagged student")
 	}
-	if !strings.Contains(body, `badge text-bg-danger">1 violation(s)<`) {
+	if !strings.Contains(body, `badge text-bg-danger">1 pelanggaran<`) {
 		t.Error("violation badge missing for the detected student")
 	}
 
@@ -405,7 +405,7 @@ func TestWorkspaceTwoNavButtonsAndPreviewPanel(t *testing.T) {
 		`id="btn-prev"`, `id="btn-next"`, `id="ws-pager"`,
 		`id="ws-preview"`, `id="preview-grid"`,
 		`id="btn-preview-back"`, `id="btn-preview-submit"`,
-		"Green = answered", // the green/red mapping hint
+		"Hijau = terjawab", // the green/red mapping hint
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("workspace missing %q", want)
@@ -418,8 +418,8 @@ func TestWorkspaceTwoNavButtonsAndPreviewPanel(t *testing.T) {
 		t.Errorf("Next buttons = %d, want exactly 1", n)
 	}
 	// the preview panel owns the ONLY submit control on the page
-	if n := strings.Count(body, "Submit quiz"); n != 1 {
-		t.Errorf("Submit quiz controls = %d, want exactly 1 (preview panel)", n)
+	if n := strings.Count(body, "Kirim kuis"); n != 1 {
+		t.Errorf("Kirim kuis controls = %d, want exactly 1 (preview panel)", n)
 	}
 }
 

@@ -143,7 +143,8 @@ func createQuiz(t *testing.T, ts *httptest.Server, ck *http.Cookie, form url.Val
 
 // postQuestion posts the bank form raw; callers assert the status themselves.
 func postQuestion(t *testing.T, ts *httptest.Server, ck *http.Cookie,
-	teks, qtype string, opts []string, correct []int) (*http.Response, string) {
+	teks, qtype string, opts []string, correct []int,
+) (*http.Response, string) {
 	t.Helper()
 	form := url.Values{"teks": {teks}, "type": {qtype}}
 	for _, o := range opts {
@@ -157,7 +158,8 @@ func postQuestion(t *testing.T, ts *httptest.Server, ck *http.Cookie,
 
 // addQuestion asserts a successful insert and returns the new bank id.
 func addQuestion(t *testing.T, ts *httptest.Server, pool *sql.DB, ck *http.Cookie,
-	teks, qtype string, opts []string, correct []int) uint64 {
+	teks, qtype string, opts []string, correct []int,
+) uint64 {
 	t.Helper()
 	resp, body := postQuestion(t, ts, ck, teks, qtype, opts, correct)
 	if resp.StatusCode != http.StatusOK {
@@ -220,7 +222,7 @@ func TestEditLockedAfterActivation(t *testing.T) {
 	if env.Error != "CONFLICT" {
 		t.Errorf("error code = %q, want CONFLICT", env.Error)
 	}
-	const want = "Quiz has participants or is active — editing is locked."
+	const want = "Kuis memiliki peserta atau sedang aktif — pengubahan dikunci."
 	if env.Message != want {
 		t.Errorf("message = %q, want %q", env.Message, want)
 	}
@@ -281,8 +283,8 @@ func TestActivateWithoutQuestions(t *testing.T) {
 		t.Fatalf("activate empty = %d, want 400 (%s)", resp.StatusCode, body)
 	}
 	env := decodeEnv(t, body)
-	if env.Error != "VALIDATION" || env.Message != "Add at least one question." {
-		t.Errorf("envelope = %+v, want VALIDATION %q", env, "Add at least one question.")
+	if env.Error != "VALIDATION" || env.Message != "Tambahkan setidaknya satu pertanyaan." {
+		t.Errorf("envelope = %+v, want VALIDATION %q", env, "Tambahkan setidaknya satu pertanyaan.")
 	}
 	// still inactive
 	var status string
@@ -494,7 +496,7 @@ func TestQuestionsFilterLinksPreserveQ(t *testing.T) {
 	}
 
 	// isolate the length-filter button group
-	start := strings.Index(body, `aria-label="Filter by question length"`)
+	start := strings.Index(body, `aria-label="Filter panjang pertanyaan"`)
 	if start < 0 {
 		t.Fatal("length-filter group missing from page")
 	}
@@ -679,7 +681,8 @@ func TestClassDeleteGuard(t *testing.T) {
 	}
 	if _, err := pool.Exec(
 		`INSERT INTO users (username, email, password_hash, nama_lengkap, kelas_id, jurusan_id)
-		 VALUES ('clsuser', 'clsuser@test.example', 'x', 'Class User', ?, 1)`, classID); err != nil {
+		 VALUES ('clsuser', 'clsuser@test.example', 'x', 'Class User', ?, 1)`, classID,
+	); err != nil {
 		t.Fatalf("user insert: %v", err)
 	}
 
@@ -723,27 +726,32 @@ func TestTeacherPagesRender(t *testing.T) {
 		path string
 		want []string
 	}{
-		{"/teacher", []string{"Dashboard", "Render quiz", "New quiz"}},
-		{"/teacher/classes", []string{"Classes", `href="/teacher/classes/new"`}},
-		{"/teacher/majors", []string{"Majors", `href="/teacher/majors/new"`}},
+		{"/teacher", []string{"Dasbor", "Render quiz", "Kuis baru"}},
+		{"/teacher/classes", []string{"Kelas", `href="/teacher/classes/new"`}},
+		{"/teacher/majors", []string{"Jurusan", `href="/teacher/majors/new"`}},
 		{"/teacher/classes/new", []string{
-			"New class", "Class name", `action="/teacher/classes"`,
-			`data-next="/teacher/classes"`, "Cancel"}},
+			"Kelas baru", "Nama kelas", `action="/teacher/classes"`,
+			`data-next="/teacher/classes"`, "Batal",
+		}},
 		{"/teacher/majors/new", []string{
-			"New major", "Major name", `action="/teacher/majors"`,
-			`data-next="/teacher/majors"`, "Cancel"}},
+			"Jurusan baru", "Nama jurusan", `action="/teacher/majors"`,
+			`data-next="/teacher/majors"`, "Batal",
+		}},
 		{fmt.Sprintf("/teacher/students/%d/edit", stuID), []string{
-			"Edit akun murid", "editpref", `action="/teacher/students/`,
-			`data-next="/teacher/students"`, `aria-current="page">Edit</li>`}},
-		{"/teacher/questions", []string{"Question bank", "Rendered question?", "Add question"}},
-		{"/teacher/questions/new", []string{"New question", `action="/teacher/questions"`, "Cancel"}},
+			"Ubah akun murid", "editpref", `action="/teacher/students/`,
+			`data-next="/teacher/students"`, `aria-current="page">Ubah</li>`,
+		}},
+		{"/teacher/questions", []string{"Bank pertanyaan", "Rendered question?", "Tambah pertanyaan"}},
+		{"/teacher/questions/new", []string{"Pertanyaan baru", `action="/teacher/questions"`, "Batal"}},
 		{fmt.Sprintf("/teacher/questions/%d/edit", q), []string{
-			"Edit question", "Rendered question?", fmt.Sprintf(`action="/teacher/questions/%d/edit`, q)}},
-		{"/teacher/quiz", []string{"Quizzes", "Render quiz"}},
-		{"/teacher/quiz/new", []string{"New quiz", "Create quiz"}},
+			"Ubah pertanyaan", "Rendered question?", fmt.Sprintf(`action="/teacher/questions/%d/edit`, q),
+		}},
+		{"/teacher/quiz", []string{"Kuis", "Render quiz"}},
+		{"/teacher/quiz/new", []string{"Kuis baru", "Buat kuis"}},
 		{fmt.Sprintf("/teacher/quiz/%d", qid), []string{
-			"Render quiz", "Questions (1)", "Settings", "Participants (0)", "Results",
-			"Add from question bank", "/qr"}},
+			"Render quiz", "Pertanyaan (1)", "Pengaturan", "Peserta (0)", "Hasil",
+			"Tambahkan dari bank pertanyaan", "/qr",
+		}},
 	}
 	for _, c := range cases {
 		resp, body := getWith(t, ts.URL+c.path, ck)

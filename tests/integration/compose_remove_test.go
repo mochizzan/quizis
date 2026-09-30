@@ -231,22 +231,22 @@ func TestComposeJSONValidation(t *testing.T) {
 
 	resp, body := postJSON(t, composeURL(ts, quiz),
 		map[string]any{"question_ids": []uint64{}}, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Choose at least one question.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Pilih setidaknya satu pertanyaan.")
 
 	resp, body = postJSON(t, composeURL(ts, quiz),
 		map[string]any{"question_ids": []string{"abc"}}, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Invalid question id.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "ID pertanyaan tidak valid.")
 
 	resp, body = postJSON(t, composeURL(ts, quiz),
 		map[string]any{"question_ids": []uint64{0}}, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Invalid question id.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "ID pertanyaan tidak valid.")
 
 	resp, body = postRaw(t, composeURL(ts, quiz), "application/json", `{"question_ids": [`, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Invalid request body.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Badan permintaan tidak valid.")
 
 	resp, body = postJSON(t, composeURL(ts, quiz),
 		map[string]any{"question_ids": []uint64{q}, "length": "bogus"}, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Invalid length filter.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Filter panjang tidak valid.")
 
 	if n := len(composedSeqs(t, pool, quiz)); n != 0 {
 		t.Errorf("composed rows = %d, want 0", n)
@@ -262,15 +262,15 @@ func TestComposeMissingQuizIs404(t *testing.T) {
 	endpoint := composeURL(ts, 999999)
 
 	resp, body := postJSON(t, endpoint, map[string]any{"question_ids": []uint64{1}}, ck)
-	assertFail(t, resp, body, http.StatusNotFound, "NOT_FOUND", "Quiz not found.")
+	assertFail(t, resp, body, http.StatusNotFound, "NOT_FOUND", "Kuis tidak ditemukan.")
 
 	resp, body = postForm(t, endpoint,
 		url.Values{"length": {""}, "question_ids[]": {"1"}}, ck)
-	assertFail(t, resp, body, http.StatusNotFound, "NOT_FOUND", "Quiz not found.")
+	assertFail(t, resp, body, http.StatusNotFound, "NOT_FOUND", "Kuis tidak ditemukan.")
 
 	resp, body = postMultipart(t, endpoint,
 		url.Values{"length": {""}, "question_ids[]": {"1"}}, ck)
-	assertFail(t, resp, body, http.StatusNotFound, "NOT_FOUND", "Quiz not found.")
+	assertFail(t, resp, body, http.StatusNotFound, "NOT_FOUND", "Kuis tidak ditemukan.")
 
 	var orphans int
 	if err := pool.QueryRow(`SELECT COUNT(*) FROM quiz_questions WHERE quiz_id = 999999`).
@@ -284,7 +284,7 @@ func TestComposeMissingQuizIs404(t *testing.T) {
 	// quiz id 0 is an invalid path param (400), distinct from a missing quiz
 	resp, body = postForm(t, composeURL(ts, 0),
 		url.Values{"length": {""}, "question_ids[]": {"1"}}, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Invalid quiz id.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "ID kuis tidak valid.")
 }
 
 // Already-composed id → 409; a mixed new+existing submission rolls the
@@ -301,12 +301,12 @@ func TestComposeDuplicateConflict(t *testing.T) {
 
 	resp, body := postJSON(t, composeURL(ts, quiz),
 		map[string]any{"question_ids": []uint64{q1}}, ck)
-	assertFail(t, resp, body, http.StatusConflict, "CONFLICT", "Question already in this quiz.")
+	assertFail(t, resp, body, http.StatusConflict, "CONFLICT", "Pertanyaan sudah ada di kuis ini.")
 
 	// one new + one already composed → whole tx rolls back
 	resp, body = postJSON(t, composeURL(ts, quiz),
 		map[string]any{"question_ids": []uint64{q2, q1}}, ck)
-	assertFail(t, resp, body, http.StatusConflict, "CONFLICT", "Question already in this quiz.")
+	assertFail(t, resp, body, http.StatusConflict, "CONFLICT", "Pertanyaan sudah ada di kuis ini.")
 
 	seqs := composedSeqs(t, pool, quiz)
 	if len(seqs) != 1 || seqs[q1] != 1 {
@@ -316,7 +316,7 @@ func TestComposeDuplicateConflict(t *testing.T) {
 	// duplicate inside one submission → 409 pre-check, no insert
 	resp, body = postJSON(t, composeURL(ts, quiz),
 		map[string]any{"question_ids": []uint64{q2, q2}}, ck)
-	assertFail(t, resp, body, http.StatusConflict, "CONFLICT", "Question already in this quiz.")
+	assertFail(t, resp, body, http.StatusConflict, "CONFLICT", "Pertanyaan sudah ada di kuis ini.")
 	if _, ok := composedSeqs(t, pool, quiz)[q2]; ok {
 		t.Error("duplicate submission inserted q2")
 	}
@@ -339,7 +339,7 @@ func TestComposeLengthFilterEnforced(t *testing.T) {
 	outOfBucket.Set("seq_"+longKey, "1")
 	resp, body := postForm(t, composeURL(ts, quiz), outOfBucket, ck)
 	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION",
-		"A selected question is outside the chosen length filter.")
+		"Pertanyaan terpilih berada di luar filter panjang yang dipilih.")
 
 	shortKey := strconv.FormatUint(short, 10)
 	inBucket := url.Values{"length": {"short"}}
@@ -361,7 +361,7 @@ func TestComposeLengthFilterEnforced(t *testing.T) {
 
 	bad := url.Values{"length": {"bogus"}, "question_ids[]": {shortKey}}
 	resp, body = postForm(t, composeURL(ts, quiz), bad, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Invalid length filter.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Filter panjang tidak valid.")
 }
 
 // getWithHeader issues a GET with one extra header (no redirect following).
@@ -460,22 +460,22 @@ func TestRemoveQuestion(t *testing.T) {
 	// invalid path params → 400
 	resp, body := postForm(t,
 		fmt.Sprintf("%s/teacher/quiz/abc/questions/%d/delete", ts.URL, q1), url.Values{}, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Invalid quiz id.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "ID kuis tidak valid.")
 
 	resp, body = postForm(t,
 		fmt.Sprintf("%s/teacher/quiz/%d/questions/x/delete", ts.URL, quiz), url.Values{}, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Invalid question id.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "ID pertanyaan tidak valid.")
 
 	resp, body = postForm(t, removeURL(ts, quiz, 0), url.Values{}, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Invalid question id.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "ID pertanyaan tidak valid.")
 
 	resp, body = postForm(t,
 		fmt.Sprintf("%s/teacher/quiz/0/questions/%d/delete", ts.URL, q1), url.Values{}, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Invalid quiz id.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "ID kuis tidak valid.")
 
 	// missing quiz → 404
 	resp, body = postForm(t, removeURL(ts, 999999, q1), url.Values{}, ck)
-	assertFail(t, resp, body, http.StatusNotFound, "NOT_FOUND", "Quiz not found.")
+	assertFail(t, resp, body, http.StatusNotFound, "NOT_FOUND", "Kuis tidak ditemukan.")
 
 	// happy path — body-less POST like the data-post frontend pattern
 	store.Set(cache.QuizSetKey(quiz), "seed", time.Minute)
@@ -499,7 +499,7 @@ func TestRemoveQuestion(t *testing.T) {
 
 	// remove again → 404 not composed
 	resp, body = postRaw(t, removeURL(ts, quiz, q1), "", "", ck)
-	assertFail(t, resp, body, http.StatusNotFound, "NOT_FOUND", "Question is not in this quiz.")
+	assertFail(t, resp, body, http.StatusNotFound, "NOT_FOUND", "Pertanyaan tidak ada di kuis ini.")
 
 	// activation locks removal — exact existing locked message
 	if resp, body := setStatus(t, ts, ck, quiz, "aktif"); resp.StatusCode != http.StatusOK {
@@ -507,7 +507,7 @@ func TestRemoveQuestion(t *testing.T) {
 	}
 	resp, body = postRaw(t, removeURL(ts, quiz, q2), "", "", ck)
 	assertFail(t, resp, body, http.StatusConflict, "CONFLICT",
-		"Quiz has participants or is active — editing is locked.")
+		"Kuis memiliki peserta atau sedang aktif — pengubahan dikunci.")
 	if _, ok := composedSeqs(t, pool, quiz)[q2]; !ok {
 		t.Error("active quiz lost its question")
 	}

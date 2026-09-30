@@ -15,7 +15,7 @@ Build a Quizizz-like quiz web application for schools with two roles:
 
 **Success** = all criteria in §11 pass with `go test ./... -race -count=1` green and `docker compose up --build` running an identical local/production environment.
 
-**UI language:** full **international English**.
+**UI language:** full **bahasa Indonesia baku (KBBI)** — URL paths, code identifiers, schema literals, and third-party/tool names stay in their original form.
 **UI style:** minimalist, custom **blue palette** (no default Bootstrap colors), light/dark mode, modern corner radius, responsive; hand-written CSS limited to the layout chrome in `web/css/app.css`; body font **Noto Sans Cypro Minoan** 400 via Google Fonts — the sanctioned CDN exception (§2); Latin text falls back to `sans-serif`.
 
 ---
@@ -127,7 +127,7 @@ users        id INT UNSIGNED AUTO_INCREMENT PK,
              username VARCHAR(50) NOT NULL UNIQUE,
              email VARCHAR(100) NOT NULL UNIQUE,
              password_hash VARCHAR(255) NOT NULL,
-             nama_lengkap VARCHAR(100) NOT NULL,      -- display name (English UI: "Full name")
+             nama_lengkap VARCHAR(100) NOT NULL,      -- display name (ID UI: "Nama lengkap")
              kelas_id SMALLINT UNSIGNED NOT NULL,
              jurusan_id SMALLINT UNSIGNED NOT NULL,
              must_change_pw TINYINT(1) NOT NULL DEFAULT 0,
@@ -371,7 +371,7 @@ nonaktif ──activate──▶ aktif ──close (modal if N working)──▶
 ### 6.12 Join rules
 - Open to all students regardless of class/major (class/major = profile labeling only).
 - Join modes: **Open** (immediate registration/waiting room) or **Approve** (request appears on teacher dashboard → approve/reject).
-- After START pressed (global): new joiners rejected with exact message **"Quiz is in progress, you cannot join."**
+- After START pressed (global): new joiners rejected with exact message **"Kuis sedang berlangsung, Anda tidak dapat bergabung."**
 - Pending approvals are settled at START: any row still `pending` when START fires becomes `dikeluarkan` (`final_score=NULL`) in the same transaction; approve attempts after START return `409`.
 - Registration ≠ start for per-question quizzes; student starts anytime while quiz is active and they are registered.
 - Teacher can manually add/remove students from a quiz.
@@ -396,7 +396,7 @@ Templates build static URLs through the `asset` func (`{{asset "/css/app.css"}}`
 
 ## 7. Routing
 
-**Path language:** all URL paths are **English** (UI = international English). Schema column/ENUM literals stay as approved in §5 — they are internal identifiers, never user-facing.
+**Path language:** all URL paths are **English** (UI text = bahasa Indonesia baku KBBI). Schema column/ENUM literals stay as approved in §5 — they are internal identifiers, never user-facing.
 
 **Config note:** `DB_HOST` is not an application config key — it is supplied only by Docker compose `environment:` and by the `env-default` fallback.
 
@@ -722,15 +722,15 @@ HTTP: `400` validation · `401` unauthenticated · `403` role/locked · `404` mi
 15. **Rehydrate after restart:** new hub from DB → running status, remaining time (`ends_at`), ranking, cheat flags, approval queue restored identically; expired-while-down → auto-finished.
 16. Disconnect → timer frozen at last heartbeat → reconnect resumes with no time lost.
 17. DB write failure → no broadcast (state never newer than DB).
-18. Join after START → exact message: **"Quiz is in progress, you cannot join."**
+18. Join after START → exact message: **"Kuis sedang berlangsung, Anda tidak dapat bergabung."**
 
 **UI & deployment:**
 19. `docker compose up --build` works from a clean machine (`http://localhost:8090`); identical images (Go 1.26.6-alpine, mariadb:12, alpine:3.24, Bootstrap 5.3.8 vendored).
 20. Layout CSS limited to `web/css/app.css` (Bootstrap utilities first); responsive; light/dark toggle; modern radius; **custom blue palette** (no default Bootstrap colors) with controlled semantic accents — danger `#C93128` (error/delete/cheat), success `#0E7A46` (correct), warning `#A15C0B`, **unified across both themes**: light body `#F4F8FD` / ink `#0F2240` with primary + links `#2C5EAD`, dark derived from the same blue family (body `#0B1A30` / ink `#D7E8F8`, primary `#1591DC`, links `#4BB8FA`, sidebar + tertiary `#10233F`) — palette theming via `--bs-*` overrides in `web/vendor/theme.css` only.
-21. All UI text in **international English**; the only external request is the sanctioned Google Fonts stylesheet (§2) — no other CDN assets; no quiz state lost on restart; no dependencies outside the closed list.
+21. All UI text in **bahasa Indonesia baku (KBBI)**; the only external request is the sanctioned Google Fonts stylesheet (§2) — no other CDN assets; no quiz state lost on restart; no dependencies outside the closed list.
 
 ---
 
 ## 12. Open Questions
 
-None — all 24 clarification decisions plus session strategy, persistence/mirror policy, UI language (English), palette (blue + controlled semantic), testing scope, and the library selection (SSE broker / .env loader / CSV+XLSX export, §2) are resolved in this document.
+None — all 24 clarification decisions plus session strategy, persistence/mirror policy, UI language (bahasa Indonesia baku KBBI), palette (blue + controlled semantic), testing scope, and the library selection (SSE broker / .env loader / CSV+XLSX export, §2) are resolved in this document.

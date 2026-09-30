@@ -25,7 +25,7 @@
   }
 
   function showErr(msg) {
-    var m = msg || "Something went wrong. Please try again.";
+    var m = msg || "Terjadi kesalahan. Silakan coba lagi.";
     if (window.quizToast) quizToast("danger", m);
     else console.error(m);
   }
@@ -101,7 +101,7 @@
       post(startForm.action).then(function (body) {
         if (body.ok) location.reload();
         else showErr(body.message);
-      }).catch(function () { showErr("Could not start the quiz."); });
+      }).catch(function () { showErr("Tidak dapat memulai kuis."); });
     });
   }
 
@@ -227,7 +227,7 @@
           return { state: "saved" };
         })
         .catch(function () {
-          showErr("Could not save the answer.");
+          showErr("Tidak dapat menyimpan jawaban.");
           return { state: "error" };
         });
     }).then(function (r) {
@@ -312,7 +312,7 @@
     if (!preview || !card) return Promise.resolve();
     var box = card.querySelector("[data-preview]");
     if (!box) return Promise.resolve();
-    box.textContent = preview.correct === true ? "Correct" : "Incorrect";
+    box.textContent = preview.correct === true ? "Benar" : "Salah";
     return new Promise(function (resolve) {
       setTimeout(function () { box.textContent = ""; resolve(); }, 2500);
     });
@@ -352,7 +352,7 @@
       })
       .catch(function () {
         busy = false;
-        showErr("Could not save the answer.");
+        showErr("Tidak dapat menyimpan jawaban.");
       });
   }
 
@@ -371,7 +371,7 @@
       })
       .catch(function () {
         busy = false;
-        showErr("Could not save the answer.");
+        showErr("Tidak dapat menyimpan jawaban.");
       });
   }
 
@@ -425,7 +425,7 @@
       render();
       var el = cardAt(current);
       if (el) el.scrollIntoView({ block: "nearest" });
-    }).catch(function () { busy = false; showErr("Could not move."); });
+    }).catch(function () { busy = false; showErr("Tidak dapat berpindah."); });
   }
 
   var nextBtn = document.getElementById("btn-next");
@@ -495,13 +495,13 @@
       box.className = "badge fs-6 px-3 py-2 border-0 " +
         (ok ? "text-bg-success" : "text-bg-danger");
       box.textContent = String(q.index + 1);
-      box.title = "Question " + (q.index + 1) + " — " +
-        (ok ? "answered" : "not answered yet");
+      box.title = "Pertanyaan " + (q.index + 1) + " — " +
+        (ok ? "terjawab" : "belum terjawab");
       box.setAttribute("data-preview-q", q.id);
       grid.appendChild(box);
     });
     if (summary) {
-      summary.textContent = done + " of " + blob.questions.length + " answered";
+      summary.textContent = done + " dari " + blob.questions.length + " terjawab";
     }
   }
 
@@ -568,7 +568,7 @@
       }
       flushEssays(); // last keystrokes reach the server before /finish
       quizConfirm(
-        "Submit your quiz now? This attempt will be finished and your answers cannot be changed.",
+        "Kirim kuis sekarang? Percobaan ini akan diakhiri dan jawaban Anda tidak dapat diubah.",
         finishAttempt);
     });
   }
@@ -589,7 +589,7 @@
         li.className =
           "list-group-item d-flex justify-content-between align-items-center";
         var left = document.createElement("span");
-        left.textContent = entry.name + (entry.cheating ? " · flagged" : "");
+        left.textContent = entry.name + (entry.cheating ? " · ditandai" : "");
         var right = document.createElement("span");
         right.className = "fw-semibold";
         right.textContent = Number(entry.score || 0).toFixed(2);
@@ -663,7 +663,7 @@
       return;
     }
     quizConfirm(
-      "You are still working on this quiz. Leave the page? Your attempt stays open and you can return to it.",
+      "Anda masih mengerjakan kuis ini. Tinggalkan halaman? Percobaan tetap terbuka dan Anda dapat kembali lagi.",
       function () {
         leaving = true;
         location.href = url.href;

@@ -128,7 +128,7 @@ func (t *Teacher) QuestionsPage(c *echo.Context) error {
 	list, err := t.listBank(c.Request().Context(), length)
 	if err != nil {
 		if errors.Is(err, errInvalidLength) {
-			return fail(c, http.StatusBadRequest, ErrValidation, "Invalid length filter.")
+			return fail(c, http.StatusBadRequest, ErrValidation, "Filter panjang tidak valid.")
 		}
 		return err
 	}
@@ -143,9 +143,9 @@ func (t *Teacher) QuestionsPage(c *echo.Context) error {
 	page := listPage(c)
 	rows, page, _ := paginate(filtered, page)
 	tb := newTable(c, search, len(filtered), page)
-	tb.Placeholder = "Search question text…"
+	tb.Placeholder = "Cari teks pertanyaan…"
 	return c.Render(http.StatusOK, "page-teacher-questions", map[string]any{
-		"Title": "Question bank", "Rows": rows, "Length": length, "Table": tb,
+		"Title": "Bank pertanyaan", "Rows": rows, "Length": length, "Table": tb,
 	})
 }
 
@@ -156,14 +156,14 @@ func (t *Teacher) QuestionsPage(c *echo.Context) error {
 // data-next back to the list with the stored success toast.
 func (t *Teacher) QuestionNewPage(c *echo.Context) error {
 	return c.Render(http.StatusOK, "page-teacher-question-new", map[string]any{
-		"Title":      "New question",
+		"Title":      "Pertanyaan baru",
 		"Q":          bankRow{Type: "pg"},
 		"FormAction": "/teacher/questions",
 		"Crumbs": []Crumb{
-			{Label: "Dashboard"},
+			{Label: "Dasbor"},
 			{Label: "Guru", URL: "/teacher"},
-			{Label: "Question Bank", URL: "/teacher/questions"},
-			{Label: "New question"},
+			{Label: "Bank pertanyaan", URL: "/teacher/questions"},
+			{Label: "Pertanyaan baru"},
 		},
 	})
 }
@@ -176,7 +176,7 @@ func (t *Teacher) QuestionNewPage(c *echo.Context) error {
 func (t *Teacher) QuestionEditPage(c *echo.Context) error {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		return fail(c, http.StatusNotFound, ErrNotFound, "Question not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Pertanyaan tidak ditemukan.")
 	}
 	var q bankRow
 	err = t.DB.QueryRowContext(c.Request().Context(),
@@ -185,20 +185,20 @@ func (t *Teacher) QuestionEditPage(c *echo.Context) error {
 		 FROM questions WHERE id = ?`, id).
 		Scan(&q.ID, &q.Teks, &q.Type, &q.Options, &q.Correct, &q.TeksLen, &q.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
-		return fail(c, http.StatusNotFound, ErrNotFound, "Question not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Pertanyaan tidak ditemukan.")
 	}
 	if err != nil {
 		return err
 	}
 	return c.Render(http.StatusOK, "page-teacher-question-edit", map[string]any{
-		"Title":      "Edit question",
+		"Title":      "Ubah pertanyaan",
 		"Q":          q,
 		"FormAction": "/teacher/questions/" + strconv.FormatUint(id, 10) + "/edit",
 		"Crumbs": []Crumb{
-			{Label: "Dashboard"},
+			{Label: "Dasbor"},
 			{Label: "Guru", URL: "/teacher"},
-			{Label: "Question Bank", URL: "/teacher/questions"},
-			{Label: "Edit question"},
+			{Label: "Bank pertanyaan", URL: "/teacher/questions"},
+			{Label: "Ubah pertanyaan"},
 		},
 	})
 }
@@ -209,11 +209,11 @@ func (t *Teacher) QuestionEditPage(c *echo.Context) error {
 func questionInput(c *echo.Context) (teks, qtype, options, correct, errMsg string) {
 	teks = strings.TrimSpace(c.FormValue("teks"))
 	if teks == "" {
-		return "", "", "", "", "Question text is required."
+		return "", "", "", "", "Teks pertanyaan wajib diisi."
 	}
 	qtype = c.FormValue("type")
 	if err := c.Request().ParseForm(); err != nil {
-		return "", "", "", "", "Invalid form body."
+		return "", "", "", "", "Badan formulir tidak valid."
 	}
 	form := c.Request().Form
 
@@ -221,37 +221,37 @@ func questionInput(c *echo.Context) (teks, qtype, options, correct, errMsg strin
 	case "pg", "multi":
 		raw := form["options[]"]
 		if len(raw) < 2 {
-			return "", "", "", "", "Add at least two options."
+			return "", "", "", "", "Tambahkan setidaknya dua pilihan."
 		}
 		opts := make([]string, len(raw))
 		for i, o := range raw {
 			opts[i] = strings.TrimSpace(o)
 			if opts[i] == "" {
-				return "", "", "", "", "Options cannot be empty."
+				return "", "", "", "", "Pilihan tidak boleh kosong."
 			}
 		}
 		var idxs []int
 		for _, s := range form["correct[]"] {
 			n, err := strconv.Atoi(s)
 			if err != nil {
-				return "", "", "", "", "Invalid correct-answer selection."
+				return "", "", "", "", "Pemilihan jawaban benar tidak valid."
 			}
 			idxs = append(idxs, n)
 		}
 		if qtype == "pg" && len(idxs) != 1 {
-			return "", "", "", "", "Choose exactly one correct answer."
+			return "", "", "", "", "Pilih tepat satu jawaban benar."
 		}
 		if qtype == "multi" && len(idxs) < 1 {
-			return "", "", "", "", "Choose at least one correct answer."
+			return "", "", "", "", "Pilih setidaknya satu jawaban benar."
 		}
 		for _, n := range idxs {
 			if n < 0 || n >= len(opts) {
-				return "", "", "", "", "Invalid correct-answer selection."
+				return "", "", "", "", "Pemilihan jawaban benar tidak valid."
 			}
 		}
 		optJSON, err := json.Marshal(opts)
 		if err != nil {
-			return "", "", "", "", "Invalid form body."
+			return "", "", "", "", "Badan formulir tidak valid."
 		}
 		// schema §5: pg correct is a scalar index, multi is an index array
 		var corrJSON []byte
@@ -261,7 +261,7 @@ func questionInput(c *echo.Context) (teks, qtype, options, correct, errMsg strin
 			corrJSON, err = json.Marshal(idxs)
 		}
 		if err != nil {
-			return "", "", "", "", "Invalid form body."
+			return "", "", "", "", "Badan formulir tidak valid."
 		}
 		return teks, qtype, string(optJSON), string(corrJSON), ""
 
@@ -273,12 +273,12 @@ func questionInput(c *echo.Context) (teks, qtype, options, correct, errMsg strin
 		}
 		keyJSON, err := json.Marshal(key)
 		if err != nil {
-			return "", "", "", "", "Invalid form body."
+			return "", "", "", "", "Badan formulir tidak valid."
 		}
 		return teks, qtype, "", string(keyJSON), ""
 
 	default:
-		return "", "", "", "", "Invalid question type."
+		return "", "", "", "", "Jenis pertanyaan tidak valid."
 	}
 }
 
@@ -344,7 +344,7 @@ func (t *Teacher) CreateQuestion(c *echo.Context) error {
 func (t *Teacher) EditQuestion(c *echo.Context) error {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid question id.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "ID pertanyaan tidak valid.")
 	}
 	teks, qtype, options, correct, errMsg := questionInput(c)
 	if errMsg != "" {
@@ -372,7 +372,7 @@ func (t *Teacher) EditQuestion(c *echo.Context) error {
 			return err
 		}
 		if !exists {
-			return fail(c, http.StatusNotFound, ErrNotFound, "Question not found.")
+			return fail(c, http.StatusNotFound, ErrNotFound, "Pertanyaan tidak ditemukan.")
 		}
 	}
 	t.Store.DeletePrefix(cache.BankKey(""))
@@ -383,7 +383,7 @@ func (t *Teacher) EditQuestion(c *echo.Context) error {
 func (t *Teacher) DeleteQuestion(c *echo.Context) error {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid question id.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "ID pertanyaan tidak valid.")
 	}
 	ctx := c.Request().Context()
 	// integrity without FKs: read the image row first so its files can
@@ -413,10 +413,10 @@ func (t *Teacher) DeleteQuestion(c *echo.Context) error {
 			return err
 		}
 		if !exists {
-			return fail(c, http.StatusNotFound, ErrNotFound, "Question not found.")
+			return fail(c, http.StatusNotFound, ErrNotFound, "Pertanyaan tidak ditemukan.")
 		}
 		return fail(c, http.StatusConflict, ErrConflict,
-			"Question is used in a quiz — remove it from the quiz first.")
+			"Pertanyaan dipakai di kuis — hapus dari kuis terlebih dahulu.")
 	}
 	if _, err := tx.ExecContext(ctx,
 		`DELETE FROM question_images WHERE question_id = ?`, id); err != nil {

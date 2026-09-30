@@ -206,7 +206,7 @@ func TestUploadRejectsOutOfOrderChunks(t *testing.T) {
 	// index 1 before index 0 → a gap is an order violation
 	resp, body := postRaw(t, uploadURL(ts, sess.UploadID)+"/chunks/1",
 		"application/octet-stream", string(payload[uploads.ChunkSize:]), ck)
-	assertValidation(t, resp, body, "Chunks must be uploaded in order.")
+	assertValidation(t, resp, body, "Bagian harus diunggah secara berurutan.")
 
 	// now sequential: 0 then 1 (index 1 == received 1) → complete works
 	resp, body = postRaw(t, uploadURL(ts, sess.UploadID)+"/chunks/0",
@@ -260,28 +260,28 @@ func TestUploadValidation(t *testing.T) {
 		resp, body := postJSON(t, ts.URL+"/teacher/uploads", map[string]any{
 			"total": 26, "size": int64(uploads.MaxImageBytes) + 1, "sha256": shaHexOf([]byte("x")),
 		}, ck)
-		assertValidation(t, resp, body, "Image exceeds the 25 MB limit.")
+		assertValidation(t, resp, body, "Gambar melebihi batas 25 MB.")
 	})
 
 	t.Run("bad checksum format at initiate", func(t *testing.T) {
 		resp, body := postJSON(t, ts.URL+"/teacher/uploads", map[string]any{
 			"total": 1, "size": 100, "sha256": "not-a-checksum",
 		}, ck)
-		assertValidation(t, resp, body, "Invalid checksum.")
+		assertValidation(t, resp, body, "Checksum tidak valid.")
 	})
 
 	t.Run("chunk count mismatch at initiate", func(t *testing.T) {
 		resp, body := postJSON(t, ts.URL+"/teacher/uploads", map[string]any{
 			"total": 5, "size": 100, "sha256": shaHexOf([]byte("x")),
 		}, ck)
-		assertValidation(t, resp, body, "Invalid upload request.")
+		assertValidation(t, resp, body, "Permintaan unggahan tidak valid.")
 	})
 
 	t.Run("complete without chunks", func(t *testing.T) {
 		payload := pngBytes(600)
 		sess := initiateUpload(t, ts, ck, 1, int64(len(payload)), shaHexOf(payload))
 		resp, body := postJSON(t, uploadURL(ts, sess.UploadID)+"/complete", nil, ck)
-		assertValidation(t, resp, body, "Upload is incomplete — some chunks are missing.")
+		assertValidation(t, resp, body, "Unggahan tidak lengkap — beberapa bagian hilang.")
 	})
 
 	t.Run("out-of-range chunk index", func(t *testing.T) {
@@ -289,7 +289,7 @@ func TestUploadValidation(t *testing.T) {
 		sess := initiateUpload(t, ts, ck, 1, int64(len(payload)), shaHexOf(payload))
 		resp, body := postRaw(t, uploadURL(ts, sess.UploadID)+"/chunks/5",
 			"application/octet-stream", string(payload), ck)
-		assertValidation(t, resp, body, "Invalid chunk index.")
+		assertValidation(t, resp, body, "Indeks bagian tidak valid.")
 	})
 
 	t.Run("non-numeric chunk index", func(t *testing.T) {
@@ -297,18 +297,18 @@ func TestUploadValidation(t *testing.T) {
 		sess := initiateUpload(t, ts, ck, 1, int64(len(payload)), shaHexOf(payload))
 		resp, body := postRaw(t, uploadURL(ts, sess.UploadID)+"/chunks/zero",
 			"application/octet-stream", string(payload), ck)
-		assertValidation(t, resp, body, "Invalid chunk index.")
+		assertValidation(t, resp, body, "Indeks bagian tidak valid.")
 	})
 
 	t.Run("invalid upload id", func(t *testing.T) {
 		bad := strings.Repeat("A", 23)
 		resp, body := postRaw(t, ts.URL+"/teacher/uploads/"+bad+"/chunks/0",
 			"application/octet-stream", "x", ck)
-		assertValidation(t, resp, body, "Invalid upload id.")
+		assertValidation(t, resp, body, "ID unggahan tidak valid.")
 		resp, body = postJSON(t, ts.URL+"/teacher/uploads/"+bad+"/delete", nil, ck)
-		assertValidation(t, resp, body, "Invalid upload id.")
+		assertValidation(t, resp, body, "ID unggahan tidak valid.")
 		resp, body = postJSON(t, ts.URL+"/teacher/uploads/"+bad+"/complete", nil, ck)
-		assertValidation(t, resp, body, "Invalid upload id.")
+		assertValidation(t, resp, body, "ID unggahan tidak valid.")
 	})
 
 	t.Run("bad magic bytes at complete", func(t *testing.T) {
@@ -320,7 +320,7 @@ func TestUploadValidation(t *testing.T) {
 			t.Fatalf("chunk = %d: %s", resp.StatusCode, body)
 		}
 		resp, body = postJSON(t, uploadURL(ts, sess.UploadID)+"/complete", nil, ck)
-		assertValidation(t, resp, body, "Unsupported image type — use JPEG, PNG, GIF, or WebP.")
+		assertValidation(t, resp, body, "Jenis gambar tidak didukung — gunakan JPEG, PNG, GIF, atau WebP.")
 	})
 
 	t.Run("sha mismatch at complete", func(t *testing.T) {
@@ -333,7 +333,7 @@ func TestUploadValidation(t *testing.T) {
 			t.Fatalf("chunk = %d: %s", resp.StatusCode, body)
 		}
 		resp, body = postJSON(t, uploadURL(ts, sess.UploadID)+"/complete", nil, ck)
-		assertValidation(t, resp, body, "File corrupted during upload — try again.")
+		assertValidation(t, resp, body, "Berkas rusak saat diunggah — coba lagi.")
 	})
 
 	t.Run("unknown session is 404", func(t *testing.T) {
@@ -345,7 +345,7 @@ func TestUploadValidation(t *testing.T) {
 		if resp.StatusCode != http.StatusNotFound {
 			t.Fatalf("complete unknown = %d, want 404 (%s)", resp.StatusCode, body)
 		}
-		if env := decodeEnv(t, body); env.Error != "NOT_FOUND" || env.Message != "Upload session not found." {
+		if env := decodeEnv(t, body); env.Error != "NOT_FOUND" || env.Message != "Sesi unggahan tidak ditemukan." {
 			t.Errorf("envelope = %+v, want NOT_FOUND %q", env, "Upload session not found.")
 		}
 	})
@@ -383,7 +383,7 @@ func TestUploadCancel(t *testing.T) {
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("chunk after delete = %d, want 404 (%s)", resp.StatusCode, body)
 	}
-	if env := decodeEnv(t, body); env.Error != "NOT_FOUND" || env.Message != "Upload session not found." {
+	if env := decodeEnv(t, body); env.Error != "NOT_FOUND" || env.Message != "Sesi unggahan tidak ditemukan." {
 		t.Errorf("envelope = %+v, want NOT_FOUND %q", env, "Upload session not found.")
 	}
 }
@@ -424,8 +424,8 @@ func TestUploadDeleteGuardWhenAttached(t *testing.T) {
 	if resp.StatusCode != http.StatusConflict {
 		t.Fatalf("delete attached = %d, want 409 (%s)", resp.StatusCode, body)
 	}
-	if env := decodeEnv(t, body); env.Error != "CONFLICT" || env.Message != "Image is already attached to a question." {
-		t.Errorf("envelope = %+v, want CONFLICT %q", env, "Image is already attached to a question.")
+	if env := decodeEnv(t, body); env.Error != "CONFLICT" || env.Message != "Gambar sudah terpasang pada pertanyaan." {
+		t.Errorf("envelope = %+v, want CONFLICT %q", env, "Gambar sudah terpasang pada pertanyaan.")
 	}
 	// no deletion happened
 	if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(done.Path))); err != nil {
@@ -481,7 +481,7 @@ func TestUploadExpiryAndSweep(t *testing.T) {
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("chunk on expired session = %d, want 404 (%s)", resp.StatusCode, body)
 	}
-	if env := decodeEnv(t, body); env.Error != "NOT_FOUND" || env.Message != "Upload session not found." {
+	if env := decodeEnv(t, body); env.Error != "NOT_FOUND" || env.Message != "Sesi unggahan tidak ditemukan." {
 		t.Errorf("envelope = %+v, want NOT_FOUND %q", env, "Upload session not found.")
 	}
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
@@ -625,8 +625,8 @@ func TestQuestionImageServing(t *testing.T) {
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("anonymous = %d, want 401 (%s)", resp.StatusCode, body)
 	}
-	if env := decodeEnv(t, body); env.Error != "UNAUTHENTICATED" || env.Message != "Sign in to view this image." {
-		t.Errorf("envelope = %+v, want UNAUTHENTICATED %q", env, "Sign in to view this image.")
+	if env := decodeEnv(t, body); env.Error != "UNAUTHENTICATED" || env.Message != "Masuk untuk melihat gambar ini." {
+		t.Errorf("envelope = %+v, want UNAUTHENTICATED %q", env, "Masuk untuk melihat gambar ini.")
 	}
 
 	// unknown id → 404
@@ -634,8 +634,8 @@ func TestQuestionImageServing(t *testing.T) {
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("unknown id = %d, want 404 (%s)", resp.StatusCode, body)
 	}
-	if env := decodeEnv(t, body); env.Error != "NOT_FOUND" || env.Message != "Image not found." {
-		t.Errorf("envelope = %+v, want NOT_FOUND %q", env, "Image not found.")
+	if env := decodeEnv(t, body); env.Error != "NOT_FOUND" || env.Message != "Gambar tidak ditemukan." {
+		t.Errorf("envelope = %+v, want NOT_FOUND %q", env, "Gambar tidak ditemukan.")
 	}
 
 	// non-numeric id → 404

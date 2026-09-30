@@ -5,12 +5,12 @@
 <div class="table-toolbar d-flex flex-wrap gap-2 align-items-center mb-3">
   <form class="d-flex gap-2 flex-grow-1" role="search" method="get" action="{{.Table.Action}}"{{if eq .Role "guru"}} data-live-search{{end}}>
     {{range .Table.Params}}<input type="hidden" name="{{index . 0}}" value="{{index . 1}}">{{end}}
-    <label class="visually-hidden" for="table-search">Search data</label>
+    <label class="visually-hidden" for="table-search">Cari data</label>
     <input class="form-control" type="search" id="table-search" name="q" value="{{.Table.Q}}" placeholder="{{.Table.Placeholder}}">
-    <button class="btn btn-outline-secondary" type="submit" title="Search" aria-label="Search" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-search" aria-hidden="true"></i></button>
-    {{if or .Table.Q .Table.Params}}<a class="btn btn-link px-2 text-nowrap" href="{{.Table.Action}}">Reset filters</a>{{end}}
+    <button class="btn btn-outline-secondary" type="submit" title="Cari" aria-label="Cari" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-search" aria-hidden="true"></i></button>
+    {{if or .Table.Q .Table.Params}}<a class="btn btn-link px-2 text-nowrap" href="{{.Table.Action}}">Atur ulang filter</a>{{end}}
   </form>
-  {{if .Table.Total}}<p id="table-count" class="text-body-secondary small mb-0 ms-auto text-nowrap">Showing {{.Table.From}}–{{.Table.To}} of {{.Table.Total}} results</p>{{end}}
+  {{if .Table.Total}}<p id="table-count" class="text-body-secondary small mb-0 ms-auto text-nowrap">Menampilkan {{.Table.From}}–{{.Table.To}} dari {{.Table.Total}} hasil</p>{{end}}
 </div>
 {{end}}
 
@@ -19,11 +19,11 @@
        TableUI.pageURL), so search, filter and page combine instead of
        overwriting one another. Rendered only when there is > 1 page. */ -}}
 {{if gt .Table.Pages 1}}
-<nav aria-label="Table pagination" class="table-pagination mt-3">
+<nav aria-label="Navigasi halaman tabel" class="table-pagination mt-3">
   <ul class="pagination mb-0 flex-wrap">
     <li class="page-item{{if not .Table.PrevURL}} disabled{{end}}">
       {{if .Table.PrevURL}}
-      <a class="page-link" href="{{.Table.PrevURL}}" aria-label="Previous page" title="Previous page" data-quiz-tooltip>&laquo;</a>
+      <a class="page-link" href="{{.Table.PrevURL}}" aria-label="Halaman sebelumnya" title="Halaman sebelumnya" data-quiz-tooltip>&laquo;</a>
       {{else}}
       <span class="page-link" aria-hidden="true">&laquo;</span>
       {{end}}
@@ -36,7 +36,7 @@
     {{end}}
     <li class="page-item{{if not .Table.NextURL}} disabled{{end}}">
       {{if .Table.NextURL}}
-      <a class="page-link" href="{{.Table.NextURL}}" aria-label="Next page" title="Next page" data-quiz-tooltip>&raquo;</a>
+      <a class="page-link" href="{{.Table.NextURL}}" aria-label="Halaman berikutnya" title="Halaman berikutnya" data-quiz-tooltip>&raquo;</a>
       {{else}}
       <span class="page-link" aria-hidden="true">&raquo;</span>
       {{end}}

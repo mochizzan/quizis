@@ -14,7 +14,7 @@
   var DANGER = "danger";
 
   function kindOf(kind) { return kind === SUCCESS ? SUCCESS : DANGER; }
-  function titleOf(kind) { return kind === SUCCESS ? "Success" : "Error"; }
+  function titleOf(kind) { return kind === SUCCESS ? "Berhasil" : "Kesalahan"; }
   function delayOf(kind) { return kind === SUCCESS ? 4000 : 6000; } // success / error
 
   function buildToast(kind, message) {
@@ -33,7 +33,7 @@
     close.type = "button";
     close.className = "btn-close";
     close.setAttribute("data-bs-dismiss", "toast");
-    close.setAttribute("aria-label", "Close");
+    close.setAttribute("aria-label", "Tutup");
     header.appendChild(title);
     header.appendChild(close);
 
@@ -93,7 +93,7 @@
       console.error("quizConfirm: confirmation modal missing — action skipped");
       return;
     }
-    body.textContent = message || "Are you sure?";
+    body.textContent = message || "Anda yakin?";
     ok.className = "btn btn-" + (tone === "primary" ? "primary" : "danger");
     pendingConfirm = onYes || null;
     bootstrap.Modal.getOrCreateInstance(modalEl).show();

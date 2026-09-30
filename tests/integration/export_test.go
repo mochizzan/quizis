@@ -17,8 +17,10 @@ import (
 )
 
 // exportHeaders must mirror the csv tags in internal/handlers/export.go.
-var exportHeaders = []string{"Rank", "Name", "Username", "Class", "Major",
-	"Score", "Status", "Cheating", "Attempts"}
+var exportHeaders = []string{
+	"Peringkat", "Nama", "Username", "Kelas", "Jurusan",
+	"Nilai", "Status", "Kecurangan", "Percobaan",
+}
 
 func TestResultsExportCSV(t *testing.T) {
 	ts, _, pool := globalFixture(t)
@@ -65,12 +67,12 @@ func TestResultsExportCSV(t *testing.T) {
 	if len(records) != 3 {
 		t.Fatalf("csv rows = %d, want header + question text + 1 student", len(records))
 	}
-	wantHeaders := append(append([]string{}, exportHeaders...), "Q1 Answer", "Q1 Score")
+	wantHeaders := append(append([]string{}, exportHeaders...), "Q1 Jawaban", "Q1 Nilai")
 	if got := strings.Join(records[0], ","); got != strings.Join(wantHeaders, ",") {
 		t.Fatalf("csv header = %s", got)
 	}
 	// row 2 = full question text under the Answer column, Score column blank
-	if records[1][0] != "Question text" || records[1][9] != "Q1 pick A" || records[1][10] != "" {
+	if records[1][0] != "Teks pertanyaan" || records[1][9] != "Q1 pick A" || records[1][10] != "" {
 		t.Fatalf("question row = %q", records[1])
 	}
 	row := records[2]
@@ -130,7 +132,8 @@ func TestResultsExportXLSX(t *testing.T) {
 		t.Fatalf("csv BOM missing, prefix = %q", bodyCSV)
 	}
 	csvRecords, err := csv.NewReader(
-		strings.NewReader(strings.TrimPrefix(bodyCSV, "\ufeff"))).ReadAll()
+		strings.NewReader(strings.TrimPrefix(bodyCSV, "\ufeff")),
+	).ReadAll()
 	if err != nil {
 		t.Fatalf("parse csv: %v", err)
 	}
@@ -154,8 +157,10 @@ func TestResultsExportXLSX(t *testing.T) {
 	}
 	// [PIN UPDATE, format-mandated] Murid row 1 follows the fixed workbook
 	// contract: No | Username | Nama | … (the CSV keeps the legacy nine).
-	wantHeaders := []string{"No", "Username", "Nama", "Kelas", "Jurusan",
-		"Status", "Attempts", "Cheating", "Q1 Answer", "Q1 Score", "Total Score"}
+	wantHeaders := []string{
+		"No", "Username", "Nama", "Kelas", "Jurusan",
+		"Status", "Percobaan", "Kecurangan", "Q1 Jawaban", "Q1 Nilai", "Total Nilai",
+	}
 	for i, want := range wantHeaders {
 		if rows[0][i] != want {
 			t.Fatalf("xlsx header[%d] = %q, want %q", i, rows[0][i], want)
@@ -210,7 +215,7 @@ func TestExportInvalidFormatAndEmpty(t *testing.T) {
 
 	resp, body := getWith(t,
 		fmt.Sprintf("%s/teacher/quiz/%d/results/export?format=bogus", ts.URL, quizID), ck)
-	assertFail(t, resp, body, http.StatusBadRequest, handlers.ErrValidation, "Invalid export format.")
+	assertFail(t, resp, body, http.StatusBadRequest, handlers.ErrValidation, "Format ekspor tidak valid.")
 
 	// no participants → header-only file in both formats
 	resp, body = getWith(t,
@@ -224,7 +229,7 @@ func TestExportInvalidFormatAndEmpty(t *testing.T) {
 	}
 	// [PIN UPDATE, format-mandated] row 2 is always the question-text row —
 	// with no participants the file is header + question text, not header only
-	if len(records) != 2 || records[1][0] != "Question text" {
+	if len(records) != 2 || records[1][0] != "Teks pertanyaan" {
 		t.Fatalf("empty csv rows = %d (%v), want header + question text", len(records), err)
 	}
 	resp, body = getWith(t,
@@ -248,7 +253,7 @@ func TestExportInvalidFormatAndEmpty(t *testing.T) {
 }
 
 // TestEssayGradingFinalizes pins spec §6.11: finish leaves final_score NULL
-// ("Awaiting grading"), grading an essay stores the score (is_correct stays
+// ("Menunggu penilaian"), grading an essay stores the score (is_correct stays
 // NULL), essay_score becomes the graded mean scaled to the essay share, and
 // final_score = score_auto + essay_score — idempotently.
 func TestEssayGradingFinalizes(t *testing.T) {
@@ -284,10 +289,10 @@ func TestEssayGradingFinalizes(t *testing.T) {
 	resultsURL := fmt.Sprintf("%s/teacher/quiz/%d/results", ts.URL, quizID)
 	gradingURL := fmt.Sprintf("%s/teacher/quiz/%d/grading", ts.URL, quizID)
 
-	// finished with essays → final_score NULL → "Awaiting grading"
+	// finished with essays → final_score NULL → "Menunggu penilaian"
 	resp, body := getWith(t, resultsURL, ck)
-	if resp.StatusCode != http.StatusOK || !contains(body, "Awaiting grading") {
-		t.Fatalf("results = %d, awaiting marker %v", resp.StatusCode, contains(body, "Awaiting grading"))
+	if resp.StatusCode != http.StatusOK || !contains(body, "Menunggu penilaian") {
+		t.Fatalf("results = %d, awaiting marker %v", resp.StatusCode, contains(body, "Menunggu penilaian"))
 	}
 	resp, body = getWith(t, gradingURL, ck)
 	if resp.StatusCode != http.StatusOK || !contains(body, "Typed my answer.") {
@@ -347,7 +352,7 @@ func TestEssayGradingFinalizes(t *testing.T) {
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("grade 150 = %d: %s", resp.StatusCode, body)
 	}
-	if env := decodeEnv(t, body); env.Message != "Score must be between 0 and 100." {
+	if env := decodeEnv(t, body); env.Message != "Nilai harus antara 0 dan 100." {
 		t.Fatalf("grade 150 message = %q", env.Message)
 	}
 
@@ -356,7 +361,7 @@ func TestEssayGradingFinalizes(t *testing.T) {
 	if resp.StatusCode != http.StatusOK || !contains(body, "90.00") {
 		t.Fatalf("results after grading = %d: %s", resp.StatusCode, body)
 	}
-	if contains(body, "Awaiting grading") {
+	if contains(body, "Menunggu penilaian") {
 		t.Fatalf("awaiting marker still present after grading")
 	}
 
@@ -385,19 +390,19 @@ func TestEssayGradingFinalizes(t *testing.T) {
 		t.Fatalf("grade number score = %d: %s", resp.StatusCode, body)
 	}
 
-	// absent / null score → 400 VALIDATION "Score is required."
+	// absent / null score → 400 VALIDATION "Nilai wajib diisi."
 	resp, body = postJSON(t, fmt.Sprintf("%s/%d", gradingURL, answerID), map[string]any{}, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Score is required.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Nilai wajib diisi.")
 	resp, body = postJSON(t, fmt.Sprintf("%s/%d", gradingURL, answerID),
 		map[string]any{"score": nil}, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Score is required.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Nilai wajib diisi.")
 
 	// strict parse: NaN would slip both bounds checks (500 instead of 400)
 	// and "85abc" used to grade as 85 — both are the range error now
 	resp, body = grade("NaN")
 	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION",
-		"Score must be between 0 and 100.")
+		"Nilai harus antara 0 dan 100.")
 	resp, body = grade("85abc")
 	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION",
-		"Score must be between 0 and 100.")
+		"Nilai harus antara 0 dan 100.")
 }

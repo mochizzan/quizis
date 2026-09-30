@@ -216,18 +216,18 @@ func quizByCode(ctx context.Context, db *sql.DB, raw string) (quizDetail, *respE
 // quizByID resolves a quiz primary key (teacher routes and the monitor).
 func quizByID(ctx context.Context, db *sql.DB, id uint64) (quizDetail, *respError, error) {
 	return loadQuiz(ctx, db, "id = ?", id,
-		errResp(http.StatusNotFound, ErrNotFound, "Quiz not found."))
+		errResp(http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan."))
 }
 
 // --- join chain (shared by POST /join and invite-URL auto-join) -------------
 
 const (
-	msgRemoved        = "You were removed from this quiz."
-	msgNoAttempts     = "You have no attempts left."
-	msgNotParticipant = "You are not a participant of this quiz."
-	msgEnded          = "This quiz has ended."
-	msgAwaiting       = "Waiting for teacher approval."
-	msgAttemptDone    = "You have already finished this attempt."
+	msgRemoved        = "Anda dikeluarkan dari kuis ini."
+	msgNoAttempts     = "Anda tidak punya sisa percobaan."
+	msgNotParticipant = "Anda bukan peserta kuis ini."
+	msgEnded          = "Kuis ini sudah berakhir."
+	msgAwaiting       = "Menunggu persetujuan guru."
+	msgAttemptDone    = "Anda sudah menyelesaikan percobaan ini."
 )
 
 // joinQuiz runs the validation chain inside one transaction and creates the
@@ -299,7 +299,7 @@ func (s *Student) joinQuiz(ctx context.Context, quiz quizDetail, userID uint64) 
 		created, _, err := latestParticipant(ctx, s.DB, quiz.ID, userID, false)
 		return created, true, nil, err
 	}
-	return attemptRow{}, false, errResp(http.StatusConflict, ErrConflict, "Please try again."), nil
+	return attemptRow{}, false, errResp(http.StatusConflict, ErrConflict, "Silakan coba lagi."), nil
 }
 
 // quizGates is the no-row branch of the join matrix: only an active quiz may
@@ -307,7 +307,7 @@ func (s *Student) joinQuiz(ctx context.Context, quiz quizDetail, userID uint64) 
 func quizGates(quiz quizDetail) *respError {
 	switch quiz.Status {
 	case "nonaktif":
-		return errResp(http.StatusNotFound, ErrNotFound, "Quiz not found.")
+		return errResp(http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan.")
 	case "selesai":
 		return errResp(http.StatusGone, ErrQuizEnded, msgEnded)
 	case "berjalan":
@@ -469,7 +469,7 @@ func (s *Student) WorkspacePage(c *echo.Context) error {
 // not possible mid-fetch; the state page shows the message).
 func (s *Student) errorPage(c *echo.Context, rerr *respError) error {
 	return c.Render(rerr.Status, "page-student-error", map[string]any{
-		"Title":   "Quiz",
+		"Title":   "Kuis",
 		"Heading": headingFor(rerr),
 		"Message": rerr.Msg,
 	})
@@ -478,17 +478,17 @@ func (s *Student) errorPage(c *echo.Context, rerr *respError) error {
 func headingFor(rerr *respError) string {
 	switch rerr.Code {
 	case ErrInvalidCode, ErrNotFound:
-		return "Quiz not found"
+		return "Kuis tidak ditemukan"
 	case ErrQuizEnded:
-		return "Quiz has ended"
+		return "Kuis telah berakhir"
 	case ErrQuizInProgress:
-		return "Quiz in progress"
+		return "Kuis sedang berlangsung"
 	case ErrAttemptLimit:
-		return "Attempt limit reached"
+		return "Batas percobaan tercapai"
 	case ErrForbidden:
-		return "Not allowed"
+		return "Tidak diizinkan"
 	}
-	return "Something went wrong"
+	return "Terjadi kesalahan"
 }
 
 // classifyView maps (quiz, attempt) to the workspace view state — the one
@@ -512,7 +512,7 @@ func classifyView(quiz quizDetail, part attemptRow) (state string, rerr *respErr
 		return "pending", nil
 	case "registered":
 		if quiz.Status == "nonaktif" {
-			return "", errResp(http.StatusNotFound, ErrNotFound, "Quiz not found.")
+			return "", errResp(http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan.")
 		}
 		if quiz.Status == "berjalan" { // missed START (join race) → closed
 			return "", errResp(http.StatusConflict, ErrQuizInProgress, MsgQuizInProgress)
@@ -898,13 +898,13 @@ func (s *Student) StartAttempt(c *echo.Context) error {
 	}
 	if quiz.TimerType != "per_soal" && quiz.TimerType != "tanpa_timer" {
 		return fail(c, http.StatusConflict, ErrConflict,
-			"This quiz does not use per-question timers.")
+			"Kuis ini tidak menggunakan timer per soal.")
 	}
 	if quiz.Status == "selesai" {
 		return fail(c, http.StatusGone, ErrQuizEnded, msgEnded)
 	}
 	if quiz.Status == "nonaktif" {
-		return fail(c, http.StatusNotFound, ErrNotFound, "Quiz not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan.")
 	}
 
 	tx, err := s.DB.BeginTx(ctx, nil)
@@ -1043,7 +1043,7 @@ func (s *Student) SubmitAnswer(c *echo.Context) error {
 		return fail(c, rerr.Status, rerr.Code, rerr.Msg)
 	}
 	if body.QuestionID == 0 {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Question is required.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Pertanyaan wajib diisi.")
 	}
 
 	tx, err := s.DB.BeginTx(ctx, nil)
@@ -1098,7 +1098,7 @@ func (s *Student) SubmitAnswer(c *echo.Context) error {
 		WHERE qq.quiz_id = ? AND qq.question_id = ?`, quiz.ID, body.QuestionID).
 		Scan(&qType, &correct, &optCount); errors.Is(err, sql.ErrNoRows) {
 		tx.Rollback()
-		return fail(c, http.StatusNotFound, ErrNotFound, "Question not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Pertanyaan tidak ditemukan.")
 	} else if err != nil {
 		tx.Rollback()
 		return err
@@ -1209,47 +1209,47 @@ func (s *Student) SubmitAnswer(c *echo.Context) error {
 // (spec §6.8 / plan §Step 10).
 func parseAnswer(qType string, optionCount int, raw json.RawMessage) (given any, stored string, rerr *respError) {
 	if len(raw) == 0 {
-		return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Answer is required.")
+		return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Jawaban wajib diisi.")
 	}
 	switch qType {
 	case "pg", "multi":
 		var nums []float64
 		if err := json.Unmarshal(raw, &nums); err != nil {
-			return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Invalid answer format.")
+			return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Format jawaban tidak valid.")
 		}
 		if len(nums) == 0 {
-			return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Select at least one option.")
+			return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Pilih setidaknya satu pilihan.")
 		}
 		if qType == "pg" && len(nums) != 1 {
-			return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Invalid answer format.")
+			return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Format jawaban tidak valid.")
 		}
 		idx := make([]int, 0, len(nums))
 		for _, n := range nums {
 			if n != float64(int(n)) || int(n) < 0 || int(n) >= optionCount {
-				return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Invalid option.")
+				return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Pilihan tidak valid.")
 			}
 			idx = append(idx, int(n))
 		}
 		b, err := json.Marshal(idx)
 		if err != nil {
-			return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Invalid answer format.")
+			return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Format jawaban tidak valid.")
 		}
 		return idx, string(b), nil
 	case "essay":
 		var text string
 		if err := json.Unmarshal(raw, &text); err != nil {
-			return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Invalid answer format.")
+			return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Format jawaban tidak valid.")
 		}
 		if strings.TrimSpace(text) == "" {
-			return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Answer is required.")
+			return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Jawaban wajib diisi.")
 		}
 		b, err := json.Marshal(text)
 		if err != nil {
-			return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Invalid answer format.")
+			return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Format jawaban tidak valid.")
 		}
 		return text, string(b), nil
 	}
-	return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Invalid question type.")
+	return nil, "", errResp(http.StatusBadRequest, ErrValidation, "Jenis pertanyaan tidak valid.")
 }
 
 // decodeJSONValue turns a stored JSON column into a value IsCorrect understands.
@@ -1282,7 +1282,7 @@ func (s *Student) NextQuestion(c *echo.Context) error {
 	}
 	if quiz.TimerType != "per_soal" && quiz.TimerType != "tanpa_timer" {
 		return fail(c, http.StatusConflict, ErrConflict,
-			"This quiz does not use free navigation.")
+			"Kuis ini tidak mengizinkan navigasi bebas.")
 	}
 	var body struct {
 		QuestionID uint64 `json:"question_id"`
@@ -1306,12 +1306,12 @@ func (s *Student) NextQuestion(c *echo.Context) error {
 	}
 	if part.Status != "started" {
 		tx.Rollback()
-		return fail(c, http.StatusConflict, ErrConflict, "Start the quiz first.")
+		return fail(c, http.StatusConflict, ErrConflict, "Mulai kuis terlebih dahulu.")
 	}
 	order := decodeOrder(part.QOrder)
 	if order == nil || len(order.Questions) == 0 {
 		tx.Rollback()
-		return fail(c, http.StatusConflict, ErrConflict, "This attempt has no questions.")
+		return fail(c, http.StatusConflict, ErrConflict, "Percobaan ini tidak berisi pertanyaan.")
 	}
 
 	pos := 1
@@ -1329,7 +1329,7 @@ func (s *Student) NextQuestion(c *echo.Context) error {
 		}
 		if !found {
 			tx.Rollback()
-			return fail(c, http.StatusNotFound, ErrNotFound, "Question not found.")
+			return fail(c, http.StatusNotFound, ErrNotFound, "Pertanyaan tidak ditemukan.")
 		}
 	}
 	if target > len(order.Questions) {
@@ -1420,7 +1420,7 @@ func (s *Student) ReportPage(c *echo.Context) error {
 	switch body.Page {
 	case "preview", "question":
 	default:
-		return fail(c, http.StatusBadRequest, ErrValidation, "Unknown page.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Halaman tidak dikenal.")
 	}
 
 	part, found, err := latestParticipant(ctx, s.DB, quiz.ID, sess.UserID, false)
@@ -1439,7 +1439,7 @@ func (s *Student) ReportPage(c *echo.Context) error {
 		return fail(c, http.StatusConflict, ErrConflict, msgAttemptDone)
 	}
 	if part.Status != "started" {
-		return fail(c, http.StatusConflict, ErrConflict, "Start the quiz first.")
+		return fail(c, http.StatusConflict, ErrConflict, "Mulai kuis terlebih dahulu.")
 	}
 
 	s.Live.SetPage(part.ID, body.Page)
@@ -1553,7 +1553,7 @@ func (s *Student) FinishAttempt(c *echo.Context) error {
 	}
 	if part.Status != "started" {
 		tx.Rollback()
-		return fail(c, http.StatusConflict, ErrConflict, "Start the quiz first.")
+		return fail(c, http.StatusConflict, ErrConflict, "Mulai kuis terlebih dahulu.")
 	}
 
 	scoreAuto, finalScore, name, updated, err := s.scoreAndFinish(ctx, tx, quiz, part, sess.UserID)
@@ -1623,7 +1623,7 @@ func (s *Student) ReportVisibility(c *echo.Context) error {
 	switch body.Kind {
 	case "blur", "minimize", "switch", "sleep":
 	default:
-		return fail(c, http.StatusBadRequest, ErrValidation, "Unknown event kind.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Jenis peristiwa tidak dikenal.")
 	}
 
 	part, found, err := latestParticipant(ctx, s.DB, quiz.ID, sess.UserID, false)
@@ -1765,7 +1765,7 @@ func studentSnapshot(ctx context.Context, db *sql.DB, live *Live, code string, u
 func decodeJSON(c *echo.Context, dst any) *respError {
 	dec := json.NewDecoder(c.Request().Body)
 	if err := dec.Decode(dst); err != nil && !errors.Is(err, io.EOF) {
-		return errResp(http.StatusBadRequest, ErrValidation, "Invalid JSON body.")
+		return errResp(http.StatusBadRequest, ErrValidation, "Badan JSON tidak valid.")
 	}
 	return nil
 }

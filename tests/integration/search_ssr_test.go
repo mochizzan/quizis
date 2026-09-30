@@ -326,7 +326,7 @@ func TestSearchSSRHostileInputs(t *testing.T) {
 	if strings.Contains(body, `value="' OR '1'='1'"`) {
 		t.Error("toolbar q echoed an unescaped quote payload")
 	}
-	if !strings.Contains(body, "No results match your search.") {
+	if !strings.Contains(body, "Tidak ada hasil yang cocok dengan pencarian Anda.") {
 		t.Error("roster did not empty out for a non-matching q")
 	}
 	if _, n := composedRows(body); n != 2 {

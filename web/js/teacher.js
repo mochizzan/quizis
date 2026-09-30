@@ -5,7 +5,7 @@
 // Confirmations go through the Bootstrap Modal (window.quizConfirm) —
 // browser alert()/confirm() are banned (see web/js/ui.js).
 function toastFailure(message) {
-  if (window.quizToast) quizToast("danger", message || "Request failed. Please try again.");
+  if (window.quizToast) quizToast("danger", message || "Permintaan gagal. Silakan coba lagi.");
 }
 function confirmThen(message, onYes) {
   if (!window.quizConfirm) {
@@ -35,7 +35,7 @@ async function runFetch(form) {
     body = await resp.json().catch(function () { return {}; });
   } catch (e) {
     if (btn) btn.disabled = false;
-    toastFailure("Network error — please try again.");
+    toastFailure("Kesalahan jaringan — silakan coba lagi.");
     return;
   }
   if (resp.ok && body.ok) {
@@ -87,7 +87,7 @@ async function runPost(btn) {
     body = await resp.json().catch(function () { return {}; });
   } catch (e) {
     btn.disabled = false;
-    toastFailure("Network error — please try again.");
+    toastFailure("Kesalahan jaringan — silakan coba lagi.");
     return;
   }
   if (resp.ok && body.ok) {
@@ -113,9 +113,54 @@ document.addEventListener("click", function (ev) {
   runPost(btn);
 });
 
+// --- finish action: POST {status:"selesai"} with the two-step confirm ------
+// runPost cannot drive this — the close endpoint needs a JSON body, and a
+// 409 with {"data":{"working":N}} opens a second confirmation carrying the
+// server's message. The button stays disabled from the first confirmation's
+// Yes until a terminal state (success reloads; failures re-enable it).
+async function finishQuiz(btn, payload) {
+  btn.disabled = true;
+  var resp, body;
+  try {
+    resp = await fetch(btn.dataset.finish, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    body = await resp.json().catch(function () { return {}; });
+  } catch (e) {
+    btn.disabled = false;
+    toastFailure("Kesalahan jaringan — silakan coba lagi.");
+    return;
+  }
+  if (resp.ok && body.ok) {
+    storeSuccess(btn.dataset.success);
+    location.reload();
+    return;
+  }
+  var working = body.data && typeof body.data.working === "number" ? body.data.working : undefined;
+  if (resp.status === 409 && working !== undefined && !payload.confirm) {
+    // re-enable BEFORE the second modal: Cancel must leave a usable button
+    btn.disabled = false;
+    confirmThen(body.message, function () {
+      btn.disabled = true;
+      finishQuiz(btn, { status: "selesai", confirm: true });
+    }, "danger");
+    return;
+  }
+  btn.disabled = false;
+  toastFailure(body.message);
+}
+
+document.addEventListener("click", function (ev) {
+  var btn = ev.target.closest ? ev.target.closest("button[data-finish]") : null;
+  if (!btn || btn.disabled) return;
+  confirmThen(btn.dataset.confirm, function () { finishQuiz(btn, { status: "selesai" }); }, "danger");
+});
+
 // --- quiz manage page: question table + bank modal + share modal -----------
 function questionTypeLabel(type) {
-  return type === "pg" ? "Single choice" : (type === "multi" ? "Multiple choice" : "Essay");
+  return type === "pg" ? "Pilihan ganda" : (type === "multi" ? "Pilihan ganda majemuk" : "Esai");
 }
 
 // bumpQuestionCount keeps the tab badge and the toolbar count in sync after
@@ -144,7 +189,7 @@ function markAdded(item) {
   if (!item.querySelector(".badge")) {
     var badge = document.createElement("span");
     badge.className = "badge text-bg-secondary";
-    badge.textContent = "In quiz";
+    badge.textContent = "Dalam kuis";
     item.appendChild(badge);
   }
 }
@@ -177,10 +222,10 @@ function appendQuestionRow(item) {
   btn.type = "button";
   btn.className = "btn btn-sm btn-outline-danger";
   btn.setAttribute("data-post", endpoint + "/" + item.dataset.addQ + "/delete");
-  btn.setAttribute("data-confirm", "Remove this question from the quiz?");
-  btn.setAttribute("data-success", "Question removed from the quiz.");
-  btn.setAttribute("title", "Remove from quiz");
-  btn.setAttribute("aria-label", "Remove from quiz");
+  btn.setAttribute("data-confirm", "Hapus pertanyaan ini dari kuis?");
+  btn.setAttribute("data-success", "Pertanyaan dihapus dari kuis.");
+  btn.setAttribute("title", "Hapus dari kuis");
+  btn.setAttribute("aria-label", "Hapus dari kuis");
   btn.setAttribute("data-bs-toggle", "tooltip");
   btn.setAttribute("data-bs-placement", "bottom");
   var icon = document.createElement("i");
@@ -214,8 +259,8 @@ function moveButton(dir) {
   btn.type = "button";
   btn.className = "btn btn-sm btn-outline-secondary";
   btn.setAttribute("data-move", dir);
-  btn.setAttribute("title", dir === "up" ? "Move up" : "Move down");
-  btn.setAttribute("aria-label", dir === "up" ? "Move question up" : "Move question down");
+  btn.setAttribute("title", dir === "up" ? "Naikkan" : "Turunkan");
+  btn.setAttribute("aria-label", dir === "up" ? "Naikkan urutan pertanyaan" : "Turunkan urutan pertanyaan");
   btn.setAttribute("data-bs-toggle", "tooltip");
   btn.setAttribute("data-bs-placement", "bottom");
   var icon = document.createElement("i");
@@ -320,7 +365,7 @@ function syncMoveButtons() {
         setBusy(false);
         if (!r.resp.ok || !r.body.ok) {
           relayout(before);
-          toastFailure(r.body.message || "Could not save the question order.");
+          toastFailure(r.body.message || "Tidak dapat menyimpan urutan pertanyaan.");
           return;
         }
         syncMoveButtons();
@@ -329,7 +374,7 @@ function syncMoveButtons() {
         busy = false;
         setBusy(false);
         relayout(before);
-        toastFailure("Network error — please try again.");
+        toastFailure("Kesalahan jaringan — silakan coba lagi.");
       });
   });
 
@@ -360,7 +405,7 @@ async function addQuestion(item) {
   var endpoint = modal ? modal.dataset.endpoint : "";
   if (!endpoint) {
     item.dataset.adding = "";
-    toastFailure("Network error — please try again.");
+    toastFailure("Kesalahan jaringan — silakan coba lagi.");
     return;
   }
   var resp, body;
@@ -373,14 +418,14 @@ async function addQuestion(item) {
     body = await resp.json().catch(function () { return {}; });
   } catch (e) {
     item.dataset.adding = "";
-    toastFailure("Network error — please try again.");
+    toastFailure("Kesalahan jaringan — silakan coba lagi.");
     return;
   }
   if (resp.ok && body.ok) {
     markAdded(item);
     appendQuestionRow(item);
     bumpQuestionCount();
-    if (window.quizToast) quizToast("success", "Question added to this quiz.");
+    if (window.quizToast) quizToast("success", "Pertanyaan ditambahkan ke kuis ini.");
     return;
   }
   if (resp.status === 409) {
@@ -601,7 +646,7 @@ function attachLiveSearch(input, opts) {
 })();
 
 function copyFailed(input) {
-  if (window.quizToast) quizToast("danger", "Copy failed — select the text and copy manually.");
+  if (window.quizToast) quizToast("danger", "Gagal menyalin — pilih teks dan salin secara manual.");
   if (input) {
     try { input.focus(); input.select(); } catch (e) { /* selection unavailable */ }
   }
@@ -611,7 +656,7 @@ function copyText(value, input) {
   try {
     if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error("clipboard unavailable");
     navigator.clipboard.writeText(value).then(function () {
-      if (window.quizToast) quizToast("success", "Copied to clipboard.");
+      if (window.quizToast) quizToast("success", "Disalin ke papan klip.");
     }, function () { copyFailed(input); });
   } catch (e) {
     copyFailed(input);
@@ -636,9 +681,29 @@ function activateTabFromHash() {
     if (!tabs || !location.hash) return;
     var btn = tabs.querySelector('[data-bs-target="' + location.hash + '"]');
     if (!btn) return;
+    // locked tabs (e.g. #tab-settings on an activated/finished quiz) render
+    // disabled — Bootstrap's Tab.show() ignores that, so skip them here;
+    // an enabled button behaves exactly as before
+    if (btn.disabled || btn.classList.contains("disabled")) return;
     bootstrap.Tab.getOrCreateInstance(btn).show();
   } catch (e) { /* stale or malformed hash — stay on the default tab */ }
 }
+
+// --- settings lock: read-only settings on activated/finished quizzes -------
+// SSR marks #tab-settings with data-settings-locked="true" (and renders no
+// Save button for those quizzes); this defense-in-depth block keeps every
+// control inside a force-shown pane unusable too — the backend edit guard
+// rejects any save either way.
+(function enforceSettingsLock() {
+  var pane = document.getElementById("tab-settings");
+  if (!pane || pane.getAttribute("data-settings-locked") !== "true") return;
+  var form = pane.querySelector("form");
+  if (!form) return;
+  var controls = form.querySelectorAll("input, select, textarea, button");
+  for (var i = 0; i < controls.length; i++) {
+    controls[i].disabled = true;
+  }
+})();
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", activateTabFromHash);

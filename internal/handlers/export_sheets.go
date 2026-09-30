@@ -199,7 +199,8 @@ func (b *exportBook) freeze(sheet string) {
 // "Sheet1" is dropped so exactly Murid, Pertanyaan, Rekapitulasi remain, in
 // that order).
 func buildExportWorkbook(quiz quizDetail, rows []exportRow, results []resultRow,
-	questions []exportQuestion, stats []questionStat, answers answerCells) (*excelize.File, error) {
+	questions []exportQuestion, stats []questionStat, answers answerCells,
+) (*excelize.File, error) {
 	f := excelize.NewFile()
 	for _, name := range []string{sheetMurid, sheetPertanyaan, sheetRekap} {
 		if _, err := f.NewSheet(name); err != nil {
@@ -233,14 +234,17 @@ func buildExportWorkbook(quiz quizDetail, rows []exportRow, results []resultRow,
 // No | Username | Nama | Kelas | Jurusan | Status | Attempts | Cheating |
 // Q1 Answer | Q1 Score | … | Total Score.
 func (b *exportBook) murid(rows []exportRow, results []resultRow,
-	questions []exportQuestion, answers answerCells) {
+	questions []exportQuestion, answers answerCells,
+) {
 	sheet := sheetMurid
-	headers := []string{"No", "Username", "Nama", "Kelas", "Jurusan",
-		"Status", "Attempts", "Cheating"}
-	for i := range questions {
-		headers = append(headers, fmt.Sprintf("Q%d Answer", i+1), fmt.Sprintf("Q%d Score", i+1))
+	headers := []string{
+		"No", "Username", "Nama", "Kelas", "Jurusan",
+		"Status", "Percobaan", "Kecurangan",
 	}
-	headers = append(headers, "Total Score")
+	for i := range questions {
+		headers = append(headers, fmt.Sprintf("Q%d Jawaban", i+1), fmt.Sprintf("Q%d Nilai", i+1))
+	}
+	headers = append(headers, "Total Nilai")
 	for i, h := range headers {
 		b.str(sheet, i+1, 1, h)
 	}
@@ -316,9 +320,11 @@ func (b *exportBook) murid(rows []exportRow, results []resultRow,
 // row whose =SUM of Nilai Maks equals the 100-point exam.
 func (b *exportBook) pertanyaan(questions []exportQuestion, stats []questionStat) {
 	sheet := sheetPertanyaan
-	headers := []string{"No", "Teks", "Tipe", "Kunci", "Nilai Maks", "Benar",
+	headers := []string{
+		"No", "Teks", "Tipe", "Kunci", "Nilai Maks", "Benar",
 		"Salah", "Tidak Dijawab", "% Benar", "% Salah", "% Kosong",
-		"Paling Sering Dipilih"}
+		"Paling Sering Dipilih",
+	}
 	for i, h := range headers {
 		b.str(sheet, i+1, 1, h)
 	}
@@ -441,8 +447,11 @@ func (b *exportBook) rekap(quiz quizDetail, rows []exportRow, questions []export
 		lo    int
 		hi    int
 	}{
-		{"0–19", 0, 19}, {"20–39", 20, 39}, {"40–59", 40, 59},
-		{"60–79", 60, 79}, {"80–100", 80, 100},
+		{"0–19", 0, 19},
+		{"20–39", 20, 39},
+		{"40–59", 40, 59},
+		{"60–79", 60, 79},
+		{"80–100", 80, 100},
 	}
 	for _, bin := range bins {
 		b.str(sheet, 1, row, bin.label)

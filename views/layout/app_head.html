@@ -1,5 +1,5 @@
 {{define "app_head"}}<!doctype html>
-<html lang="en">
+<html lang="id">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -24,8 +24,8 @@
 <header class="app-topbar">
   <button class="btn btn-sm btn-outline-secondary d-lg-none" type="button"
           data-bs-toggle="offcanvas" data-bs-target="#app-sidebar"
-          aria-controls="app-sidebar" aria-label="Open menu"
-          title="Open menu" data-quiz-tooltip data-bs-placement="bottom">
+          aria-controls="app-sidebar" aria-label="Buka menu"
+          title="Buka menu" data-quiz-tooltip data-bs-placement="bottom">
     <i class="bi bi-list" aria-hidden="true"></i>
   </button>
   {{- /* Role-aware brand: the app shell links the role dashboard, never the
@@ -33,7 +33,7 @@
   <a class="app-topbar-brand d-lg-none"{{if eq .Role "guru"}} href="/teacher"{{else if eq .Role "murid"}} href="/student"{{end}}>Quiz</a>
   <div class="ms-auto d-flex align-items-center gap-2">
     <button type="button" class="btn btn-sm btn-outline-secondary" data-theme-toggle
-            title="Toggle theme" aria-label="Toggle theme"
+            title="Ganti tema" aria-label="Ganti tema"
             data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-circle-half" aria-hidden="true"></i></button>
     {{template "profile-link" .}}
   </div>

@@ -61,9 +61,9 @@ func (a *Auth) PasswordResetsPage(c *echo.Context) error {
 	page := listPage(c)
 	out, page, _ := paginate(filtered, page)
 	tb := newTable(c, q, len(filtered), page)
-	tb.Placeholder = "Search username or name…"
+	tb.Placeholder = "Cari username atau nama…"
 	return c.Render(http.StatusOK, "page-password-resets", map[string]any{
-		"Title": "Password resets", "Rows": out,
+		"Title": "Permintaan ganti kata sandi", "Rows": out,
 		"Table": tb, "Sort": sortBy,
 	})
 }
@@ -74,7 +74,7 @@ func (a *Auth) PasswordResetsPage(c *echo.Context) error {
 func (a *Auth) ApproveReset(c *echo.Context) error {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid request id.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "ID permintaan tidak valid.")
 	}
 	ctx := c.Request().Context()
 
@@ -90,7 +90,7 @@ func (a *Auth) ApproveReset(c *echo.Context) error {
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		tx.Rollback()
-		return fail(c, http.StatusConflict, ErrConflict, "Request already handled.")
+		return fail(c, http.StatusConflict, ErrConflict, "Permintaan sudah diproses.")
 	}
 	var userID uint64
 	if err := tx.QueryRowContext(ctx, `SELECT user_id FROM password_resets WHERE id = ?`, id).
@@ -114,7 +114,7 @@ func (a *Auth) ApproveReset(c *echo.Context) error {
 func (a *Auth) RejectReset(c *echo.Context) error {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid request id.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "ID permintaan tidak valid.")
 	}
 	res, err := a.DB.ExecContext(c.Request().Context(),
 		`UPDATE password_resets SET status = 'ditolak' WHERE id = ? AND status = 'pending'`, id)
@@ -122,7 +122,7 @@ func (a *Auth) RejectReset(c *echo.Context) error {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return fail(c, http.StatusConflict, ErrConflict, "Request already handled.")
+		return fail(c, http.StatusConflict, ErrConflict, "Permintaan sudah diproses.")
 	}
 	return ok(c, nil)
 }

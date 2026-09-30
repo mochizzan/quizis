@@ -7,8 +7,8 @@
   <div class="toast" role="alert" aria-live="assertive" aria-atomic="true"
        data-ssr-toast data-bs-delay="{{if eq .Kind "success"}}4000{{else}}6000{{end}}">
     <div class="toast-header text-bg-{{.Kind}}">
-      <strong class="me-auto">{{if eq .Kind "success"}}Success{{else}}Error{{end}}</strong>
-      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+      <strong class="me-auto">{{if eq .Kind "success"}}Berhasil{{else}}Kesalahan{{end}}</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Tutup"></button>
     </div>
     <div class="toast-body">{{.Message}}</div>
   </div>
@@ -25,13 +25,13 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="modal-title h5" id="confirm-modal-title">Confirm</h2>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h2 class="modal-title h5" id="confirm-modal-title">Konfirmasi</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
       </div>
       <div class="modal-body" id="confirm-modal-body"></div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Cancel</button>
-        <button type="button" class="btn btn-danger" id="confirm-modal-ok"><i class="bi bi-check-lg me-1" aria-hidden="true"></i>Confirm</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Batal</button>
+        <button type="button" class="btn btn-danger" id="confirm-modal-ok"><i class="bi bi-check-lg me-1" aria-hidden="true"></i>Konfirmasi</button>
       </div>
     </div>
   </div>

@@ -1,69 +1,69 @@
 {{define "settings-fields"}}
 <div class="row g-3">
   <div class="col-12">
-    <label class="form-label" for="judul">Title</label>
+    <label class="form-label" for="judul">Judul</label>
     <input class="form-control" id="judul" name="judul" maxlength="150" required value="{{.Quiz.Judul}}">
   </div>
   <div class="col-12">
-    <label class="form-label" for="deskripsi">Description</label>
+    <label class="form-label" for="deskripsi">Deskripsi</label>
     <textarea class="form-control" id="deskripsi" name="deskripsi" rows="2">{{.Quiz.Deskripsi}}</textarea>
   </div>
   <div class="col-md-6">
     <label class="form-label" for="timer_type">Timer</label>
     <select class="form-select" id="timer_type" name="timer_type">
-      <option value="global" {{if eq .Quiz.TimerType "global"}}selected{{end}}>Global — one deadline for the whole quiz</option>
-      <option value="per_soal" {{if eq .Quiz.TimerType "per_soal"}}selected{{end}}>Per question — each question gets its own timer</option>
-      <option value="tanpa_timer" {{if eq .Quiz.TimerType "tanpa_timer"}}selected{{end}}>No timer — students answer without any countdown</option>
+      <option value="global" {{if eq .Quiz.TimerType "global"}}selected{{end}}>Global — satu batas waktu untuk seluruh kuis</option>
+      <option value="per_soal" {{if eq .Quiz.TimerType "per_soal"}}selected{{end}}>Per pertanyaan — setiap pertanyaan punya timer sendiri</option>
+      <option value="tanpa_timer" {{if eq .Quiz.TimerType "tanpa_timer"}}selected{{end}}>Tanpa timer — murid menjawab tanpa hitung mundur</option>
     </select>
   </div>
   <div class="col-md-6">
-    <label class="form-label" for="join_mode">Join mode</label>
+    <label class="form-label" for="join_mode">Mode bergabung</label>
     <select class="form-select" id="join_mode" name="join_mode">
-      <option value="open" {{if eq .Quiz.JoinMode "open"}}selected{{end}}>Open — students join instantly</option>
-      <option value="approve" {{if eq .Quiz.JoinMode "approve"}}selected{{end}}>Approval — teacher admits each student</option>
+      <option value="open" {{if eq .Quiz.JoinMode "open"}}selected{{end}}>Terbuka — murid bergabung langsung</option>
+      <option value="approve" {{if eq .Quiz.JoinMode "approve"}}selected{{end}}>Persetujuan — guru menyetujui setiap murid</option>
     </select>
   </div>
   <div class="col-md-4" id="total_seconds_field">
-    <label class="form-label" for="total_seconds">Total time (seconds)</label>
+    <label class="form-label" for="total_seconds">Waktu total (detik)</label>
     <input class="form-control" id="total_seconds" name="total_seconds" type="number" min="0" value="{{.Quiz.TotalSeconds}}">
   </div>
   <div class="col-md-4" id="per_question_seconds_field">
-    <label class="form-label" for="per_question_seconds">Seconds per question</label>
+    <label class="form-label" for="per_question_seconds">Detik per pertanyaan</label>
     <input class="form-control" id="per_question_seconds" name="per_question_seconds" type="number" min="0" value="{{.Quiz.PerQuestionSeconds}}">
   </div>
   <div class="col-md-4">
-    <label class="form-label" for="max_attempts">Attempts</label>
+    <label class="form-label" for="max_attempts">Jumlah percobaan</label>
     <input class="form-control" id="max_attempts" name="max_attempts" type="number" min="1" value="{{.Quiz.MaxAttempts}}">
-    <div class="form-text">Global-timer quizzes always allow 1 attempt.</div>
+    <div class="form-text">Kuis dengan timer global selalu mengizinkan 1 percobaan.</div>
   </div>
   <div class="col-md-6">
-    <label class="form-label" for="question_review">Question review after finishing</label>
+    <label class="form-label" for="question_review">Tinjauan pertanyaan setelah selesai</label>
     <select class="form-select" id="question_review" name="question_review">
-      <option value="none" {{if eq .Quiz.QuestionReview "none"}}selected{{end}}>None</option>
-      <option value="text" {{if eq .Quiz.QuestionReview "text"}}selected{{end}}>Questions + own answers</option>
-      <option value="full" {{if eq .Quiz.QuestionReview "full"}}selected{{end}}>Full — with correct answers</option>
+      <option value="none" {{if eq .Quiz.QuestionReview "none"}}selected{{end}}>Tidak ada</option>
+      <option value="text" {{if eq .Quiz.QuestionReview "text"}}selected{{end}}>Pertanyaan + jawaban sendiri</option>
+      <option value="full" {{if eq .Quiz.QuestionReview "full"}}selected{{end}}>Lengkap — beserta jawaban benar</option>
     </select>
   </div>
   <div class="col-12 d-flex flex-wrap gap-4">
     <div class="form-check">
       <input class="form-check-input" type="checkbox" id="shuffle_questions" name="shuffle_questions" value="1" {{if .Quiz.ShuffleQuestions}}checked{{end}}>
-      <label class="form-check-label" for="shuffle_questions">Shuffle question order</label>
+      <label class="form-check-label" for="shuffle_questions">Acak urutan pertanyaan</label>
     </div>
     <div class="form-check">
       <input class="form-check-input" type="checkbox" id="shuffle_options" name="shuffle_options" value="1" {{if .Quiz.ShuffleOptions}}checked{{end}}>
-      <label class="form-check-label" for="shuffle_options">Shuffle answer options</label>
+      <label class="form-check-label" for="shuffle_options">Acak pilihan jawaban</label>
     </div>
     <div class="form-check">
       <input class="form-check-input" type="checkbox" id="show_correct_wrong" name="show_correct_wrong" value="1" {{if .Quiz.ShowCorrectWrong}}checked{{end}}>
-      <label class="form-check-label" for="show_correct_wrong">Show correct/wrong after answering</label>
+      <label class="form-check-label" for="show_correct_wrong">Tampilkan benar/salah setelah menjawab</label>
     </div>
     <div class="form-check">
       <input class="form-check-input" type="checkbox" id="show_final_score" name="show_final_score" value="1" {{if .Quiz.ShowFinalScore}}checked{{end}}>
-      <label class="form-check-label" for="show_final_score">Show final score</label>
+      <label class="form-check-label" for="show_final_score">Tampilkan nilai akhir</label>
     </div>
     <div class="form-check">
       <input class="form-check-input" type="checkbox" id="ranking_live" name="ranking_live" value="1" {{if .Quiz.RankingLive}}checked{{end}}>
-      <label class="form-check-label" for="ranking_live">Live ranking</label>
+      <label class="form-check-label" for="ranking_live">Peringkat langsung</label>
     </div>
   </div>
 </div>
@@ -94,11 +94,11 @@
     var msg = "";
     if (sel.value === "global") {
       if (!(Number(document.getElementById("total_seconds").value) >= 1)) {
-        msg = "Enter the total time in seconds.";
+        msg = "Masukkan waktu total dalam detik.";
       }
     } else if (sel.value === "per_soal") {
       if (!(Number(document.getElementById("per_question_seconds").value) >= 1)) {
-        msg = "Enter the seconds per question.";
+        msg = "Masukkan detik per pertanyaan.";
       }
     }
     if (!msg) return;

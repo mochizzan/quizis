@@ -24,7 +24,7 @@ import (
 func (g *Global) SetQuizStatus(c *echo.Context) error {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid quiz id.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "ID kuis tidak valid.")
 	}
 	want, confirm := c.FormValue("status"), false
 	if want == "" {
@@ -33,7 +33,7 @@ func (g *Global) SetQuizStatus(c *echo.Context) error {
 			Confirm bool   `json:"confirm"`
 		}
 		if err := json.NewDecoder(c.Request().Body).Decode(&body); err != nil {
-			return fail(c, http.StatusBadRequest, ErrValidation, "Invalid status.")
+			return fail(c, http.StatusBadRequest, ErrValidation, "Status tidak valid.")
 		}
 		want, confirm = body.Status, body.Confirm
 	}
@@ -43,7 +43,7 @@ func (g *Global) SetQuizStatus(c *echo.Context) error {
 	case "aktif", "nonaktif":
 		return activateQuiz(c, g.DB, g.Store, id, want)
 	default:
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid status.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Status tidak valid.")
 	}
 }
 
@@ -60,7 +60,7 @@ func (g *Global) closeWithModal(c *echo.Context, quizID uint64, confirm bool) er
 	}
 	if working > 0 && !confirm {
 		return failData(c, http.StatusConflict, ErrConflict,
-			fmt.Sprintf("%d students are still working — close anyway?", working),
+			fmt.Sprintf("%d murid masih mengerjakan — tetap tutup?", working),
 			map[string]any{"working": working})
 	}
 	closed, err := g.closeQuiz(ctx, quizID, "teacher_close")
@@ -74,9 +74,9 @@ func (g *Global) closeWithModal(c *echo.Context, quizID uint64, confirm bool) er
 			return err
 		}
 		if !exists {
-			return fail(c, http.StatusNotFound, ErrNotFound, "Quiz not found.")
+			return fail(c, http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan.")
 		}
-		return fail(c, http.StatusConflict, ErrConflict, "This quiz is not running.")
+		return fail(c, http.StatusConflict, ErrConflict, "Kuis ini tidak sedang berjalan.")
 	}
 	return ok(c, map[string]any{"status": "selesai"})
 }

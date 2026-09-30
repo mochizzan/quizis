@@ -291,7 +291,7 @@ func TestRegisterLoginLogoutCycle(t *testing.T) {
 
 	// register page renders with seeded dropdowns
 	_, body := do(t, ts.URL+"/register", "")
-	if !strings.Contains(body, "Register") || !strings.Contains(body, "Grade 10") {
+	if !strings.Contains(body, "Daftar") || !strings.Contains(body, "Grade 10") {
 		t.Fatalf("register page missing expected content: %q", body)
 	}
 

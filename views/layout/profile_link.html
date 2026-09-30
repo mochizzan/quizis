@@ -4,19 +4,19 @@
        murid → /student, guru → /teacher. */ -}}
 {{if eq .Role "guru"}}
 <a class="btn btn-sm btn-outline-secondary rounded-circle" href="/teacher"
-   aria-label="Dashboard guru" title="Dashboard guru"
+   aria-label="Dasbor guru" title="Dasbor guru"
    data-bs-toggle="tooltip" data-bs-placement="bottom">
   <i class="bi bi-person" aria-hidden="true"></i>
 </a>
 {{else if eq .Role "murid"}}
 <a class="btn btn-sm btn-outline-secondary rounded-circle" href="/student"
-   aria-label="Dashboard murid" title="Dashboard murid"
+   aria-label="Dasbor murid" title="Dasbor murid"
    data-bs-toggle="tooltip" data-bs-placement="bottom">
   <i class="bi bi-person" aria-hidden="true"></i>
 </a>
 {{else}}
 <a class="btn btn-sm btn-outline-secondary rounded-circle" href="/login"
-   aria-label="Sign in" title="Sign in"
+   aria-label="Masuk" title="Masuk"
    data-bs-toggle="tooltip" data-bs-placement="bottom">
   <i class="bi bi-person" aria-hidden="true"></i>
 </a>

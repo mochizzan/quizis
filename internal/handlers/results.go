@@ -274,7 +274,8 @@ type answerCell struct {
 // RAW username → question seq — the same row policy as loadExportAnswers
 // (results table keys off results[i].Username).
 func loadAnswerCells(ctx context.Context, db *sql.DB, quizID uint64,
-	questions []exportQuestion) (map[string]map[int]answerCell, error) {
+	questions []exportQuestion,
+) (map[string]map[int]answerCell, error) {
 	essay := make(map[int]bool, len(questions))
 	for _, q := range questions {
 		essay[q.Seq] = q.Type == "essay"
@@ -313,20 +314,20 @@ func loadAnswerCells(ctx context.Context, db *sql.DB, quizID uint64,
 		case isEssay:
 			cell.Given = essayAnswerText(raw)
 			if score.Valid {
-				cell.State, cell.Label = "graded", fmt.Sprintf("Graded %.2f", score.Float64)
+				cell.State, cell.Label = "graded", fmt.Sprintf("Dinilai %.2f", score.Float64)
 			} else {
-				cell.State, cell.Label = "pending", "Awaiting grading"
+				cell.State, cell.Label = "pending", "Menunggu penilaian"
 			}
 		case isCorrect.Valid && isCorrect.Int64 != 0:
-			cell.State, cell.Label, cell.Correct = "correct", "Correct", true
+			cell.State, cell.Label, cell.Correct = "correct", "Benar", true
 			cell.Given = lettersOf(raw)
 		case isCorrect.Valid:
-			cell.State, cell.Label = "wrong", "Wrong"
+			cell.State, cell.Label = "wrong", "Salah"
 			cell.Given = lettersOf(raw)
 		default:
 			// auto-graded rows always carry 0/1 — a NULL here predates
 			// grading, so report it as pending instead of calling it wrong
-			cell.State, cell.Label = "pending", "Awaiting grading"
+			cell.State, cell.Label = "pending", "Menunggu penilaian"
 			cell.Given = lettersOf(raw)
 		}
 		if cell.Given == "" {
@@ -344,7 +345,8 @@ func loadAnswerCells(ctx context.Context, db *sql.DB, quizID uint64,
 // per question in seq order for every row of the current page. A question
 // without an answers row is "Unanswered" — the engine scores it as wrong.
 func answerPanels(rows []resultRow, questions []exportQuestion,
-	cells map[string]map[int]answerCell) map[string]studentAnswers {
+	cells map[string]map[int]answerCell,
+) map[string]studentAnswers {
 	out := make(map[string]studentAnswers, len(rows))
 	for _, r := range rows {
 		bySeq := cells[r.Username]
@@ -361,7 +363,7 @@ func answerPanels(rows []resultRow, questions []exportQuestion,
 					panel.Correct++
 				}
 			} else {
-				line.Given, line.State, line.Label = "—", "unanswered", "Unanswered"
+				line.Given, line.State, line.Label = "—", "unanswered", "Belum terjawab"
 			}
 			panel.Lines = append(panel.Lines, line)
 		}
@@ -420,7 +422,7 @@ func (t *Teacher) ResultsPage(c *echo.Context) error {
 	page := listPage(c)
 	rows, page, _ := paginate(filtered, page)
 	tb := newTable(c, q, len(filtered), page)
-	tb.Placeholder = "Search name or username…"
+	tb.Placeholder = "Cari nama atau username…"
 	// one answers read for the rows actually shown (≤ TablePerPage), keyed
 	// by the RAW usernames the rows carry
 	cells, err := loadAnswerCells(ctx, t.DB, quiz.ID, questions)
@@ -428,7 +430,7 @@ func (t *Teacher) ResultsPage(c *echo.Context) error {
 		return err
 	}
 	return c.Render(http.StatusOK, "page-teacher-results", map[string]any{
-		"Title":    "Results — " + quiz.Judul,
+		"Title":    "Hasil — " + quiz.Judul,
 		"Judul":    quiz.Judul,
 		"ID":       quiz.ID,
 		"Code":     quiz.Code,
@@ -437,7 +439,7 @@ func (t *Teacher) ResultsPage(c *echo.Context) error {
 		"HasEssay": hasEssay,
 		"Table":    tb,
 		"Sort":     sortBy,
-		"Crumbs":   QuizCrumbs(quiz.ID, quiz.Judul, "Results"),
+		"Crumbs":   QuizCrumbs(quiz.ID, quiz.Judul, "Hasil"),
 	})
 }
 
@@ -464,12 +466,12 @@ func (t *Teacher) ResultsAnalysisPage(c *echo.Context) error {
 		return err
 	}
 	return c.Render(http.StatusOK, "page-teacher-results-analysis", map[string]any{
-		"Title":  "Question analysis — " + quiz.Judul,
+		"Title":  "Analisis pertanyaan — " + quiz.Judul,
 		"Judul":  quiz.Judul,
 		"ID":     quiz.ID,
 		"Code":   quiz.Code,
 		"Stats":  stats,
-		"Crumbs": QuizCrumbs(quiz.ID, quiz.Judul, "Question analysis"),
+		"Crumbs": QuizCrumbs(quiz.ID, quiz.Judul, "Analisis pertanyaan"),
 	})
 }
 
@@ -531,11 +533,11 @@ func (t *Teacher) GrantingPage(c *echo.Context) error {
 		return err
 	}
 	return c.Render(http.StatusOK, "page-teacher-grading", map[string]any{
-		"Title":  "Grading — " + quiz.Judul,
+		"Title":  "Penilaian — " + quiz.Judul,
 		"Judul":  quiz.Judul,
 		"ID":     quiz.ID,
 		"Rows":   list,
-		"Crumbs": QuizCrumbs(quiz.ID, quiz.Judul, "Grading"),
+		"Crumbs": QuizCrumbs(quiz.ID, quiz.Judul, "Penilaian"),
 	})
 }
 
@@ -551,7 +553,7 @@ func (t *Teacher) GradeAnswer(c *echo.Context) error {
 	}
 	answerID, err := strconv.ParseUint(c.Param("answerId"), 10, 64)
 	if err != nil || answerID == 0 {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid answer id.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "ID jawaban tidak valid.")
 	}
 	score := c.FormValue("score")
 	// The JSON branch accepts a number OR a numeric string: data-json (the
@@ -566,16 +568,16 @@ func (t *Teacher) GradeAnswer(c *echo.Context) error {
 		}
 		switch v := body.Score.(type) {
 		case nil: // absent or null
-			return fail(c, http.StatusBadRequest, ErrValidation, "Score is required.")
+			return fail(c, http.StatusBadRequest, ErrValidation, "Nilai wajib diisi.")
 		case string:
 			if v == "" {
-				return fail(c, http.StatusBadRequest, ErrValidation, "Score is required.")
+				return fail(c, http.StatusBadRequest, ErrValidation, "Nilai wajib diisi.")
 			}
 			score = v
 		case float64:
 			score = fmt.Sprintf("%g", v)
 		default: // bool/object/array — same envelope as a JSON type error
-			return fail(c, http.StatusBadRequest, ErrValidation, "Invalid JSON body.")
+			return fail(c, http.StatusBadRequest, ErrValidation, "Badan JSON tidak valid.")
 		}
 	}
 	// strict parse: Sscanf accepted NaN (it slips BOTH bounds checks and
@@ -584,7 +586,7 @@ func (t *Teacher) GradeAnswer(c *echo.Context) error {
 	value, err := strconv.ParseFloat(strings.TrimSpace(score), 64)
 	if err != nil || math.IsNaN(value) || math.IsInf(value, 0) || value < 0 || value > 100 {
 		return fail(c, http.StatusBadRequest, ErrValidation,
-			"Score must be between 0 and 100.")
+			"Nilai harus antara 0 dan 100.")
 	}
 	value = float64(int(value*100+0.5)) / 100 // round half-up, two decimals
 
@@ -609,7 +611,7 @@ func (t *Teacher) GradeAnswer(c *echo.Context) error {
 		answerID, quiz.ID).Scan(&participantID, &stored)
 	if errors.Is(err, sql.ErrNoRows) {
 		tx.Rollback()
-		return fail(c, http.StatusNotFound, ErrNotFound, "Essay answer not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Jawaban esai tidak ditemukan.")
 	}
 	if err != nil {
 		tx.Rollback()

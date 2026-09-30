@@ -4,12 +4,12 @@
        runs when its route is opened. Shared by both pages, so the two views
        can never drift apart. Active picks the current one ("students" |
        "analysis"). */ -}}
-<ul class="nav nav-tabs mb-3" aria-label="Results views">
+<ul class="nav nav-tabs mb-3" aria-label="Tampilan hasil">
   <li class="nav-item">
-    <a class="nav-link{{if eq .Active "students"}} active{{end}}" href="/teacher/quiz/{{.ID}}/results"{{if eq .Active "students"}} aria-current="page"{{end}}><i class="bi bi-people me-2" aria-hidden="true"></i>Students</a>
+    <a class="nav-link{{if eq .Active "students"}} active{{end}}" href="/teacher/quiz/{{.ID}}/results"{{if eq .Active "students"}} aria-current="page"{{end}}><i class="bi bi-people me-2" aria-hidden="true"></i>Murid</a>
   </li>
   <li class="nav-item">
-    <a class="nav-link{{if eq .Active "analysis"}} active{{end}}" href="/teacher/quiz/{{.ID}}/results/analysis"{{if eq .Active "analysis"}} aria-current="page"{{end}}><i class="bi bi-bar-chart-line me-2" aria-hidden="true"></i>Question analysis</a>
+    <a class="nav-link{{if eq .Active "analysis"}} active{{end}}" href="/teacher/quiz/{{.ID}}/results/analysis"{{if eq .Active "analysis"}} aria-current="page"{{end}}><i class="bi bi-bar-chart-line me-2" aria-hidden="true"></i>Analisis pertanyaan</a>
   </li>
 </ul>
 {{end}}

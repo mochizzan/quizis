@@ -82,7 +82,8 @@ func userOf(t *testing.T, ts *httptest.Server, ck *http.Cookie) uint64 {
 // requested status (nonaktif → as-created; aktif → activated; berjalan/selesai
 // → activated then flipped with SQL). Returns (quizID, code).
 func activeQuiz(t *testing.T, ts *httptest.Server, pool *sql.DB, ck *http.Cookie,
-	title, status, joinMode string) (uint64, string) {
+	title, status, joinMode string,
+) (uint64, string) {
 	t.Helper()
 	form := quizForm(title)
 	form.Set("join_mode", joinMode)
@@ -165,14 +166,14 @@ func TestJoinMatrix(t *testing.T) {
 		alice := studentCookie(t, pool, "alice-nonaktif")
 		_, code := activeQuiz(t, ts, pool, ck, "Join NA", "nonaktif", "open")
 		resp, body := postJoin(t, ts, code, alice)
-		assertFail(t, resp, body, http.StatusNotFound, handlers.ErrNotFound, "Quiz not found.")
+		assertFail(t, resp, body, http.StatusNotFound, handlers.ErrNotFound, "Kuis tidak ditemukan.")
 	})
 
 	t.Run("closed quiz is gone", func(t *testing.T) {
 		alice := studentCookie(t, pool, "alice-closed")
 		_, code := activeQuiz(t, ts, pool, ck, "Join Done", "selesai", "open")
 		resp, body := postJoin(t, ts, code, alice)
-		assertFail(t, resp, body, http.StatusGone, handlers.ErrQuizEnded, "This quiz has ended.")
+		assertFail(t, resp, body, http.StatusGone, handlers.ErrQuizEnded, "Kuis ini sudah berakhir.")
 	})
 
 	t.Run("running quiz refuses new joiners", func(t *testing.T) {
@@ -230,7 +231,7 @@ func TestJoinMatrix(t *testing.T) {
 			t.Fatalf("mark removed: %v", err)
 		}
 		resp, body = postJoin(t, ts, code, alice)
-		assertFail(t, resp, body, http.StatusForbidden, handlers.ErrForbidden, "You were removed from this quiz.")
+		assertFail(t, resp, body, http.StatusForbidden, handlers.ErrForbidden, "Anda dikeluarkan dari kuis ini.")
 	})
 
 	t.Run("approve join creates pending and rejoin keeps it", func(t *testing.T) {
@@ -278,7 +279,7 @@ func TestJoinMatrix(t *testing.T) {
 			t.Fatalf("finish attempt: %v", err)
 		}
 		resp, body := postJoin(t, ts, code, alice)
-		assertFail(t, resp, body, http.StatusConflict, handlers.ErrAttemptLimit, "You have no attempts left.")
+		assertFail(t, resp, body, http.StatusConflict, handlers.ErrAttemptLimit, "Anda tidak punya sisa percobaan.")
 	})
 
 	t.Run("second attempt allowed when configured", func(t *testing.T) {
@@ -422,7 +423,7 @@ func TestInviteAutoJoin(t *testing.T) {
 		if resp.StatusCode != http.StatusForbidden {
 			t.Fatalf("invite = %d, want 403 (body %s)", resp.StatusCode, body)
 		}
-		if !contains(body, "You were removed from this quiz.") {
+		if !contains(body, "Anda dikeluarkan dari kuis ini.") {
 			t.Fatalf("removed message missing: %s", body)
 		}
 	})
@@ -438,7 +439,7 @@ func TestInviteAutoJoin(t *testing.T) {
 		if resp.StatusCode != http.StatusGone {
 			t.Fatalf("invite = %d, want 410 (body %s)", resp.StatusCode, body)
 		}
-		if !contains(body, "This quiz has ended.") {
+		if !contains(body, "Kuis ini sudah berakhir.") {
 			t.Fatalf("ended message missing: %s", body)
 		}
 	})

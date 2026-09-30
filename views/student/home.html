@@ -15,16 +15,16 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="modal-title h5" id="active-quiz-modal-title">Ongoing quiz</h2>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h2 class="modal-title h5" id="active-quiz-modal-title">Kuis sedang berlangsung</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
       </div>
       <div class="modal-body">
-        You are still in the quiz <strong>{{.Judul}}</strong> and it is running
-        right now. Your answers are saved &mdash; return before it ends.
+        Anda masih berada di kuis <strong>{{.Judul}}</strong> dan kuis tersebut
+        sedang berlangsung. Jawaban Anda tersimpan &mdash; kembali sebelum kuis berakhir.
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Stay here</button>
-        <a class="btn btn-primary" href="/quiz/{{.Code}}"><i class="bi bi-arrow-right me-1" aria-hidden="true"></i>Return to quiz</a>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tetap di sini</button>
+        <a class="btn btn-primary" href="/quiz/{{.Code}}"><i class="bi bi-arrow-right me-1" aria-hidden="true"></i>Kembali ke kuis</a>
       </div>
     </div>
   </div>

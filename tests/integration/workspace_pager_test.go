@@ -75,10 +75,10 @@ func TestWorkspacePagerStaticContract(t *testing.T) {
 		t.Fatalf("pager controls missing (prev %v / next %v)",
 			contains(body, `id="btn-prev"`), contains(body, `id="btn-next"`))
 	}
-	if !contains(body, `id="btn-prev" class="btn btn-outline-secondary disabled" disabled title="Previous"`) {
+	if !contains(body, `id="btn-prev" class="btn btn-outline-secondary disabled" disabled title="Sebelumnya"`) {
 		t.Fatalf("prev not disabled on the first question: %s", pagerWindow(body, `id="btn-prev"`))
 	}
-	if !contains(body, `id="btn-next" class="btn btn-outline-secondary" title="Next"`) {
+	if !contains(body, `id="btn-next" class="btn btn-outline-secondary" title="Berikutnya"`) {
 		t.Fatalf("next not enabled on the first question: %s", pagerWindow(body, `id="btn-next"`))
 	}
 	if !contains(body, `data-index="0" data-type="pg">`) {
@@ -104,8 +104,8 @@ func TestWorkspacePagerStaticContract(t *testing.T) {
 	// --- Q2 (middle): both buttons enabled, only Q2 visible
 	advance(1)
 	body = page()
-	if !contains(body, `id="btn-prev" class="btn btn-outline-secondary" title="Previous"`) ||
-		!contains(body, `id="btn-next" class="btn btn-outline-secondary" title="Next"`) {
+	if !contains(body, `id="btn-prev" class="btn btn-outline-secondary" title="Sebelumnya"`) ||
+		!contains(body, `id="btn-next" class="btn btn-outline-secondary" title="Berikutnya"`) {
 		t.Fatalf("middle pager not fully enabled:\nprev: %s\nnext: %s",
 			pagerWindow(body, `id="btn-prev"`), pagerWindow(body, `id="btn-next"`))
 	}
@@ -128,10 +128,10 @@ func TestWorkspacePagerStaticContract(t *testing.T) {
 	// --- Q3 (last): next disabled, prev enabled, only Q3 visible
 	advance(2)
 	body = page()
-	if !contains(body, `id="btn-next" class="btn btn-outline-secondary disabled" disabled title="Next"`) {
+	if !contains(body, `id="btn-next" class="btn btn-outline-secondary disabled" disabled title="Berikutnya"`) {
 		t.Fatalf("next not disabled on the last question: %s", pagerWindow(body, `id="btn-next"`))
 	}
-	if !contains(body, `id="btn-prev" class="btn btn-outline-secondary" title="Previous"`) {
+	if !contains(body, `id="btn-prev" class="btn btn-outline-secondary" title="Sebelumnya"`) {
 		t.Fatalf("prev not enabled on the last question: %s", pagerWindow(body, `id="btn-prev"`))
 	}
 	if !contains(body, `data-index="2" data-type="pg">`) {
@@ -195,10 +195,10 @@ func TestWorkspacePagerLinearStaticContract(t *testing.T) {
 		t.Fatalf("workspace not started: %s", pagerWindow(body, "data-state="))
 	}
 	// pager buttons exist but stay hidden in linear mode
-	if !contains(body, `id="btn-prev" class="btn btn-outline-secondary disabled" hidden disabled title="Previous"`) {
+	if !contains(body, `id="btn-prev" class="btn btn-outline-secondary disabled" hidden disabled title="Sebelumnya"`) {
 		t.Fatalf("linear prev not hidden: %s", pagerWindow(body, `id="btn-prev"`))
 	}
-	if !contains(body, `id="btn-next" class="btn btn-outline-secondary" hidden title="Next"`) {
+	if !contains(body, `id="btn-next" class="btn btn-outline-secondary" hidden title="Berikutnya"`) {
 		t.Fatalf("linear next not hidden: %s", pagerWindow(body, `id="btn-next"`))
 	}
 	// one question per page already holds server-side

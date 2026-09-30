@@ -18,11 +18,11 @@ const (
 )
 
 // MsgQuizInProgress is the exact message required by spec §6.12 / §11.18.
-const MsgQuizInProgress = "Quiz is in progress, you cannot join."
+const MsgQuizInProgress = "Kuis sedang berlangsung, Anda tidak dapat bergabung."
 
 // MsgInvalidCode is the shared wording for an unknown join code (POST /join
 // and the SSE stream both use it).
-const MsgInvalidCode = "No quiz found for that code."
+const MsgInvalidCode = "Kuis tidak ditemukan untuk kode tersebut."
 
 // ok writes the success envelope {"ok":true,"data":...} with status 200.
 func ok(c *echo.Context, data any) error {

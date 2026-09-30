@@ -83,8 +83,8 @@ func TestResultsAnswerPanelAndAnalysisRoute(t *testing.T) {
 	for _, want := range []string{
 		`data-answer-toggle`,              // expander control
 		`aria-controls="answer-detail-0"`, // its panel id
-		`<th class="text-nowrap">Answer</th>`,
-		`<th class="text-nowrap">Correct answer</th>`,
+		`<th class="text-nowrap">Jawaban</th>`,
+		`<th class="text-nowrap">Jawaban benar</th>`,
 		`>0/2</td>`, // correct count: 0 of 2
 	} {
 		if !strings.Contains(body, want) {
@@ -95,19 +95,19 @@ func TestResultsAnswerPanelAndAnalysisRoute(t *testing.T) {
 		t.Errorf("results page has no link to the analysis route")
 	}
 	// the analysis table must NOT render on this route anymore
-	if strings.Contains(body, "Most chosen") {
+	if strings.Contains(body, "Paling banyak dipilih") {
 		t.Errorf("results page still renders the per-question analysis")
 	}
 
 	seg := detailSegment(t, body, 0)
 	for _, want := range []string{
-		"Panel pick Beta",                      // question text
-		"<td>A</td>",                           // student answer (picked Alpha = original index 0)
-		"<td>B</td>",                           // answer key (Beta = original index 1)
-		`text-bg-danger">Wrong</span>`,         // correct/salah status
-		"Panel explain it",                     // next question line
-		"Expected essay key",                   // essay key rendered as the correct answer
-		`text-bg-secondary">Unanswered</span>`, // no answer row at all
+		"Panel pick Beta",                          // question text
+		"<td>A</td>",                               // student answer (picked Alpha = original index 0)
+		"<td>B</td>",                               // answer key (Beta = original index 1)
+		`text-bg-danger">Salah</span>`,             // correct/salah status
+		"Panel explain it",                         // next question line
+		"Expected essay key",                       // essay key rendered as the correct answer
+		`text-bg-secondary">Belum terjawab</span>`, // no answer row at all
 	} {
 		if !strings.Contains(seg, want) {
 			t.Errorf("answer panel missing %q", want)
@@ -124,8 +124,8 @@ func TestResultsAnswerPanelAndAnalysisRoute(t *testing.T) {
 		t.Fatalf("GET analysis = %d: %s", resp.StatusCode, body)
 	}
 	for _, want := range []string{
-		"Question analysis",
-		"Most chosen",
+		"Analisis pertanyaan",
+		"Paling banyak dipilih",
 		"Panel pick Beta",
 		`aria-current="page"`, // this view is the active tab
 	} {
@@ -133,7 +133,7 @@ func TestResultsAnswerPanelAndAnalysisRoute(t *testing.T) {
 			t.Errorf("analysis page missing %q", want)
 		}
 	}
-	for _, avoid := range []string{`data-answer-toggle`, "Awaiting grading"} {
+	for _, avoid := range []string{`data-answer-toggle`, "Menunggu penilaian"} {
 		if strings.Contains(body, avoid) {
 			t.Errorf("analysis page renders %q (students table leaked in)", avoid)
 		}

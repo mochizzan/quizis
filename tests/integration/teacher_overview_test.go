@@ -94,7 +94,8 @@ func overviewFixture(t *testing.T) (*httptest.Server, *sql.DB, *http.Cookie) {
 			`INSERT INTO users (username, email, password_hash, nama_lengkap,
 				kelas_id, jurusan_id, aktif)
 			 VALUES (?, ?, 'x', ?, ?, ?, ?)`,
-			username, username+"@overview.test", username, kelas, jurusan, aktif); err != nil {
+			username, username+"@overview.test", username, kelas, jurusan, aktif,
+		); err != nil {
 			t.Fatalf("insert user %s: %v", username, err)
 		}
 	}
@@ -102,7 +103,8 @@ func overviewFixture(t *testing.T) (*httptest.Server, *sql.DB, *http.Cookie) {
 		t.Helper()
 		var id uint32
 		if err := pool.QueryRow(
-			`SELECT id FROM `+table+` WHERE nama = ? ORDER BY id LIMIT 1`, nama).
+			`SELECT id FROM `+table+` WHERE nama = ? ORDER BY id LIMIT 1`, nama,
+		).
 			Scan(&id); err != nil {
 			t.Fatalf("ref id %s/%s: %v", table, nama, err)
 		}
@@ -116,7 +118,8 @@ func overviewFixture(t *testing.T) (*httptest.Server, *sql.DB, *http.Cookie) {
 		t.Helper()
 		res, err := pool.Exec(
 			`INSERT INTO quizzes (code, judul, timer_type, status)
-			 VALUES (?, ?, 'global', ?)`, code, judul, status)
+			 VALUES (?, ?, 'global', ?)`, code, judul, status,
+		)
 		if err != nil {
 			t.Fatalf("insert quiz %s: %v", judul, err)
 		}
@@ -134,7 +137,8 @@ func overviewFixture(t *testing.T) (*httptest.Server, *sql.DB, *http.Cookie) {
 		t.Helper()
 		if _, err := pool.Exec(
 			`INSERT INTO participants (quiz_id, user_id, attempt_no, status, final_score)
-			 VALUES (?, ?, 1, ?, ?)`, quizID, userID, status, score); err != nil {
+			 VALUES (?, ?, 1, ?, ?)`, quizID, userID, status, score,
+		); err != nil {
 			t.Fatalf("insert participant: %v", err)
 		}
 	}
@@ -215,7 +219,8 @@ func kvValue(t *testing.T, name string, kvs []ovKV, label string) int {
 // assertSeededChart pins the seeded rows by label and requires every
 // extra ref row (created by other tests) to sit at zero in this fixture.
 func assertSeededChart(t *testing.T, name string, kvs []ovKV,
-	seeded []string, want map[string]int) {
+	seeded []string, want map[string]int,
+) {
 	t.Helper()
 	if len(kvs) < len(seeded) {
 		t.Fatalf("%s rows = %d, want at least %d", name, len(kvs), len(seeded))
@@ -302,11 +307,11 @@ func TestTeacherOverviewEnvelopeAndFilters(t *testing.T) {
 			t.Errorf("filters.jurusan = %v", jurusanNames)
 		}
 		wantStatus := []ovStatusOption{
-			{Value: "", Label: "All"},
-			{Value: "aktif", Label: "Active"},
-			{Value: "berjalan", Label: "Running"},
-			{Value: "selesai", Label: "Finished"},
-			{Value: "nonaktif", Label: "Not active"},
+			{Value: "", Label: "Semua"},
+			{Value: "aktif", Label: "Aktif"},
+			{Value: "berjalan", Label: "Berjalan"},
+			{Value: "selesai", Label: "Selesai"},
+			{Value: "nonaktif", Label: "Tidak aktif"},
 		}
 		if len(ov.Filters.Status) != len(wantStatus) {
 			t.Fatalf("filters.status = %+v", ov.Filters.Status)
@@ -356,14 +361,14 @@ func TestTeacherOverviewEnvelopeAndFilters(t *testing.T) {
 		for _, q := range ov.Quizzes {
 			byID[q.ID] = q
 		}
-		if q := byID[q1]; q.Label != "Active" || q.Chip != "badge bg-ok" || q.Peserta != 2 {
+		if q := byID[q1]; q.Label != "Aktif" || q.Chip != "badge bg-ok" || q.Peserta != 2 {
 			t.Errorf("aktif quiz label/chip/peserta = %q/%q/%d", q.Label, q.Chip, q.Peserta)
 		}
-		if q := byID[q2]; q.Label != "Not active" || q.Chip != "badge text-bg-secondary" ||
+		if q := byID[q2]; q.Label != "Tidak aktif" || q.Chip != "badge text-bg-secondary" ||
 			q.Peserta != 2 {
 			t.Errorf("nonaktif quiz label/chip/peserta = %q/%q/%d", q.Label, q.Chip, q.Peserta)
 		}
-		if q := byID[q3]; q.Label != "Finished" || q.Chip != "badge border text-secondary" ||
+		if q := byID[q3]; q.Label != "Selesai" || q.Chip != "badge border text-secondary" ||
 			q.Peserta != 0 {
 			t.Errorf("selesai quiz label/chip/peserta = %q/%q/%d", q.Label, q.Chip, q.Peserta)
 		}

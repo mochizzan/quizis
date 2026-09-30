@@ -53,11 +53,11 @@ func TestAppPagesHaveNoRootNavigation(t *testing.T) {
 		// every app page carries the breadcrumb, and its root crumb is a
 		// static label — never an anchor anywhere
 		nav := crumbNav(t, body)
-		if !strings.Contains(nav, `breadcrumb-item">Dashboard</li>`) {
-			t.Errorf("GET %s: Dashboard crumb is not a static label\ngot: %s", p.path, nav)
+		if !strings.Contains(nav, `breadcrumb-item">Dasbor</li>`) {
+			t.Errorf("GET %s: Dasbor crumb is not a static label\ngot: %s", p.path, nav)
 		}
-		if strings.Contains(nav, `>Dashboard</a>`) {
-			t.Errorf("GET %s: Dashboard crumb links\ngot: %s", p.path, nav)
+		if strings.Contains(nav, `>Dasbor</a>`) {
+			t.Errorf("GET %s: Dasbor crumb links\ngot: %s", p.path, nav)
 		}
 	}
 

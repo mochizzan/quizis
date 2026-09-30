@@ -5,40 +5,40 @@
     <div>
       <h1 class="h4 mb-1">{{.Judul}}</h1>
       <p class="text-body-secondary small mb-0">
-        Join code <code>{{.Code}}</code> &middot; {{.TimerType}} timer
+        Kode gabung <code>{{.Code}}</code> &middot; {{.TimerType}} timer
         &middot; status <span class="border rounded px-2">{{.Status}}</span>
       </p>
     </div>
     <div id="monitor-clock" class="text-end" data-ends="{{.EndsUnix}}" data-now="{{.ServerNow}}"{{if not .TimerOn}} hidden{{end}}>
-      <span class="text-body-secondary small">Time left</span>
+      <span class="text-body-secondary small">Sisa waktu</span>
       <div class="fs-5 fw-semibold" id="monitor-timer">&mdash;:__</div>
     </div>
     <div class="d-flex gap-2 align-items-center">
-      <button type="button" id="btn-stop" class="btn btn-outline-danger" data-act="stop" hidden><i class="bi bi-stop-circle me-1" aria-hidden="true"></i>Stop</button>
-      <button type="button" id="btn-close" class="btn btn-danger" data-act="close" hidden><i class="bi bi-power me-1" aria-hidden="true"></i>Close quiz</button>
+      <button type="button" id="btn-stop" class="btn btn-outline-danger" data-act="stop" hidden><i class="bi bi-stop-circle me-1" aria-hidden="true"></i>Hentikan</button>
+      <button type="button" id="btn-close" class="btn btn-danger" data-act="close" hidden><i class="bi bi-power me-1" aria-hidden="true"></i>Tutup kuis</button>
     </div>
   </header>
 
   <section class="mb-4">
-    <h2 class="h5"><i class="bi bi-hourglass-split me-2" aria-hidden="true"></i>Waiting room <span class="badge text-bg-secondary" id="pending-count">{{.Pending}}</span></h2>
+    <h2 class="h5"><i class="bi bi-hourglass-split me-2" aria-hidden="true"></i>Ruang tunggu <span class="badge text-bg-secondary" id="pending-count">{{.Pending}}</span></h2>
     <ul class="list-group" id="waiting-list">
       {{range .Cards}}
       {{if eq .Status "pending"}}
       <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2" data-pid="{{.ParticipantID}}">
         <span>{{.Name}}</span>
         <div class="d-flex gap-1">
-          <button type="button" class="btn btn-sm btn-outline-success" data-act="approve" data-pid="{{.ParticipantID}}" title="Approve" aria-label="Approve" data-quiz-tooltip><i class="bi bi-check-lg" aria-hidden="true"></i></button>
-          <button type="button" class="btn btn-sm btn-outline-danger" data-act="reject" data-pid="{{.ParticipantID}}" title="Reject" aria-label="Reject" data-quiz-tooltip><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+          <button type="button" class="btn btn-sm btn-outline-success" data-act="approve" data-pid="{{.ParticipantID}}" title="Setujui" aria-label="Setujui" data-quiz-tooltip><i class="bi bi-check-lg" aria-hidden="true"></i></button>
+          <button type="button" class="btn btn-sm btn-outline-danger" data-act="reject" data-pid="{{.ParticipantID}}" title="Tolak" aria-label="Tolak" data-quiz-tooltip><i class="bi bi-x-lg" aria-hidden="true"></i></button>
         </div>
       </li>
       {{end}}
       {{end}}
-      {{if not .Pending}}<li class="list-group-item text-body-secondary">Nobody is waiting.</li>{{end}}
+      {{if not .Pending}}<li class="list-group-item text-body-secondary">Tidak ada yang menunggu.</li>{{end}}
     </ul>
   </section>
 
   <section class="mb-4">
-    <h2 class="h5"><i class="bi bi-people me-2" aria-hidden="true"></i>Students</h2>
+    <h2 class="h5"><i class="bi bi-people me-2" aria-hidden="true"></i>Murid</h2>
     <div class="row g-2" id="card-list">
       {{range .Cards}}
       <div class="col-md-6 col-xl-4" data-pid="{{.ParticipantID}}">
@@ -49,44 +49,44 @@
           <div class="d-flex justify-content-between align-items-center mb-1">
             <strong>{{.Name}}</strong>
             <span class="d-flex gap-1 align-items-center">
-              {{if .Cheating}}<span class="badge text-bg-danger">flagged</span>{{else if gt .Violations 0}}<span class="badge text-bg-danger">{{.Violations}} violation(s)</span>{{end}}
+              {{if .Cheating}}<span class="badge text-bg-danger">Ditandai</span>{{else if gt .Violations 0}}<span class="badge text-bg-danger">{{.Violations}} pelanggaran</span>{{end}}
               <span class="badge text-bg-secondary">{{.Status}}</span>
             </span>
           </div>
           <div class="small text-body-secondary">
-            {{if eq .Page "preview"}}Preview{{else if gt .CurrentQ 0}}Question {{.CurrentQ}}{{end}}{{if or (eq .Page "preview") (gt .CurrentQ 0)}} &middot; {{end}}
-            {{if .Connected}}connected{{else}}not connected{{end}}{{if and .Cheating .Violations}} &middot; <span class="text-danger">{{.Violations}} violation(s)</span>{{end}}
+            {{if eq .Page "preview"}}Pratinjau{{else if gt .CurrentQ 0}}Pertanyaan {{.CurrentQ}}{{end}}{{if or (eq .Page "preview") (gt .CurrentQ 0)}} &middot; {{end}}
+            {{if .Connected}}tersambung{{else}}tidak tersambung{{end}}{{if and .Cheating .Violations}} &middot; <span class="text-danger">{{.Violations}} pelanggaran</span>{{end}}
           </div>
           {{if and (eq $.TimerType "per_soal") .Spent}}
           <div class="small" data-spent-line>
-            {{range .Spent}}<span class="me-1">Q{{.Q}} {{.Sec}}s</span>{{end}}
+            {{range .Spent}}<span class="me-1">Pertanyaan {{.Q}}: {{.Sec}} dtk</span>{{end}}
           </div>
           {{end}}
-          {{if .Answer}}<div class="small" data-answer-line>{{if .AnswerQPos}}answer Q{{.AnswerQPos}}: {{.AnswerText}}{{else}}answer: {{.AnswerText}}{{end}}</div>{{end}}
+          {{if .Answer}}<div class="small" data-answer-line>{{if .AnswerQPos}}jawaban pertanyaan {{.AnswerQPos}}: {{.AnswerText}}{{else}}jawaban: {{.AnswerText}}{{end}}</div>{{end}}
           {{if .ScoreText}}<div class="fw-semibold">{{.ScoreText}}</div>{{end}}
           {{if or .Cheating (gt .Violations 0)}}
           <div class="mt-2 d-flex gap-1">
-            <button type="button" class="btn btn-sm btn-outline-danger" data-act="cheat_toggle" data-pid="{{.ParticipantID}}" title="Mark as cheating" aria-label="Mark as cheating" data-quiz-tooltip><i class="bi bi-exclamation-triangle" aria-hidden="true"></i></button>
-            <button type="button" class="btn btn-sm btn-danger" data-act="remove" data-pid="{{.ParticipantID}}" data-name="{{.Name}}" data-bs-toggle="modal" data-bs-target="#confirmRemove" title="Remove student" aria-label="Remove student" data-quiz-tooltip><i class="bi bi-person-dash" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-danger" data-act="cheat_toggle" data-pid="{{.ParticipantID}}" title="Tandai melakukan kecurangan" aria-label="Tandai melakukan kecurangan" data-quiz-tooltip><i class="bi bi-exclamation-triangle" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-sm btn-danger" data-act="remove" data-pid="{{.ParticipantID}}" data-name="{{.Name}}" data-bs-toggle="modal" data-bs-target="#confirmRemove" title="Keluarkan murid" aria-label="Keluarkan murid" data-quiz-tooltip><i class="bi bi-person-dash" aria-hidden="true"></i></button>
           </div>
           {{end}}
         </div>
       </div>
       {{end}}
-      {{if not .Cards}}<p class="text-body-secondary">Nobody has joined yet.</p>{{end}}
+      {{if not .Cards}}<p class="text-body-secondary">Belum ada yang bergabung.</p>{{end}}
     </div>
   </section>
 
   <section>
-    <h2 class="h5"><i class="bi bi-trophy me-2" aria-hidden="true"></i>Live ranking</h2>
+    <h2 class="h5"><i class="bi bi-trophy me-2" aria-hidden="true"></i>Peringkat langsung</h2>
     <ol class="list-group list-group-numbered" id="monitor-rank">
       {{range .Ranking}}
       <li class="list-group-item d-flex justify-content-between align-items-center{{if .Cheating}} active{{end}}">
-        <span>{{.Name}}{{if .Removed}} &middot; removed{{end}}{{if .Cheating}} &middot; flagged{{end}}</span>
+        <span>{{.Name}}{{if .Removed}} &middot; dikeluarkan{{end}}{{if .Cheating}} &middot; ditandai{{end}}</span>
         <span class="fw-semibold">{{printf "%.2f" .Score}}</span>
       </li>
       {{end}}
-      {{if not .Ranking}}<li class="list-group-item text-body-secondary">Ranking appears once answers arrive (if ranking_live is on).</li>{{end}}
+      {{if not .Ranking}}<li class="list-group-item text-body-secondary">Peringkat muncul setelah jawaban masuk (jika ranking_live aktif).</li>{{end}}
     </ol>
   </section>
 
@@ -98,15 +98,15 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="modal-title h5">Close quiz</h2>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h2 class="modal-title h5">Tutup kuis</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
       </div>
       <div class="modal-body">
-        <span id="close-working-count">0</span> students are still working — close anyway?
+        <span id="close-working-count">0</span> murid masih mengerjakan — tetap tutup?
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Keep open</button>
-        <button type="button" class="btn btn-danger" id="close-confirm-btn"><i class="bi bi-power me-1" aria-hidden="true"></i>Close anyway</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Biarkan terbuka</button>
+        <button type="button" class="btn btn-danger" id="close-confirm-btn"><i class="bi bi-power me-1" aria-hidden="true"></i>Tetap tutup</button>
       </div>
     </div>
   </div>
@@ -118,16 +118,16 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="modal-title h5">Remove student</h2>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h2 class="modal-title h5">Keluarkan murid</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
       </div>
       <div class="modal-body">
-        Remove <strong id="remove-student-name"></strong> from this quiz?
-        Their answers are scored, then they are out.
+        Keluarkan <strong id="remove-student-name"></strong> dari kuis ini?
+        Jawaban mereka akan dinilai, lalu mereka dikeluarkan.
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Keep</button>
-        <button type="button" class="btn btn-danger" id="remove-confirm-btn"><i class="bi bi-person-dash me-1" aria-hidden="true"></i>Remove</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Biarkan</button>
+        <button type="button" class="btn btn-danger" id="remove-confirm-btn"><i class="bi bi-person-dash me-1" aria-hidden="true"></i>Keluarkan</button>
       </div>
     </div>
   </div>

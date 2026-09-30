@@ -78,7 +78,7 @@ func (t *Teacher) Dashboard(c *echo.Context) error {
 		return err
 	}
 	return c.Render(http.StatusOK, "page-teacher-dashboard", map[string]any{
-		"Title": "Dashboard", "Pending": pending,
+		"Title": "Dasbor", "Pending": pending,
 		"OverviewJSON": template.JS(blob),
 	})
 }
@@ -167,12 +167,12 @@ func (t *Teacher) refsList(ctx context.Context, kind string) ([]refRow, error) {
 
 // ClassesPage renders the class dropdown manager.
 func (t *Teacher) ClassesPage(c *echo.Context) error {
-	return t.refsPage(c, "kelas", "Classes")
+	return t.refsPage(c, "kelas", "Kelas")
 }
 
 // MajorsPage renders the major dropdown manager.
 func (t *Teacher) MajorsPage(c *echo.Context) error {
-	return t.refsPage(c, "jurusan", "Majors")
+	return t.refsPage(c, "jurusan", "Jurusan")
 }
 
 // --- GET /teacher/classes/new, /teacher/majors/new ------------------------
@@ -181,25 +181,25 @@ func (t *Teacher) MajorsPage(c *echo.Context) error {
 // The form posts through the shared JSON endpoint; on success teacher.js
 // follows data-next back to the list with the stored success toast.
 func (t *Teacher) NewClassPage(c *echo.Context) error {
-	return t.refNewPage(c, "kelas", "New class", "Class name")
+	return t.refNewPage(c, "kelas", "Kelas baru", "Nama kelas")
 }
 
 // NewMajorPage renders the same create form for a major.
 func (t *Teacher) NewMajorPage(c *echo.Context) error {
-	return t.refNewPage(c, "jurusan", "New major", "Major name")
+	return t.refNewPage(c, "jurusan", "Jurusan baru", "Nama jurusan")
 }
 
 func (t *Teacher) refNewPage(c *echo.Context, kind, title, nameLabel string) error {
-	section := "Classes"
+	section := "Kelas"
 	if kind == "jurusan" {
-		section = "Majors"
+		section = "Jurusan"
 	}
 	list := "/teacher/" + refPath(kind)
 	return c.Render(http.StatusOK, "page-teacher-ref-new", map[string]any{
 		"Title": title, "Kind": kind, "NameLabel": nameLabel,
 		"Action": list,
 		"Crumbs": []Crumb{
-			{Label: "Dashboard"},
+			{Label: "Dasbor"},
 			{Label: "Guru", URL: "/teacher"},
 			{Label: section, URL: list},
 			{Label: title},
@@ -237,7 +237,7 @@ func (t *Teacher) refsPage(c *echo.Context, kind, title string) error {
 	page := listPage(c)
 	pageRows, page, _ := paginate(filtered, page)
 	tb := newTable(c, q, len(filtered), page)
-	tb.Placeholder = "Search name…"
+	tb.Placeholder = "Cari nama…"
 	return c.Render(http.StatusOK, "page-teacher-refs", map[string]any{
 		"Title": title, "Kind": kind, "Rows": pageRows,
 		"Action": "/teacher/" + refPath(kind),
@@ -252,10 +252,10 @@ func (t *Teacher) CreateMajor(c *echo.Context) error { return t.createRef(c, "ju
 func (t *Teacher) createRef(c *echo.Context, kind string) error {
 	nama := strings.TrimSpace(c.FormValue("nama"))
 	if nama == "" {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Name is required.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Nama wajib diisi.")
 	}
 	if len([]rune(nama)) > 50 {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Name is too long (max 50 characters).")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Nama terlalu panjang (maksimal 50 karakter).")
 	}
 	table := "ref_kelas"
 	if kind == "jurusan" {
@@ -285,7 +285,7 @@ func (t *Teacher) DeleteMajor(c *echo.Context) error { return t.deleteRef(c, "ju
 func (t *Teacher) deleteRef(c *echo.Context, kind string) error {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid id.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "ID tidak valid.")
 	}
 	table, usersCol := "ref_kelas", "kelas_id"
 	if kind == "jurusan" {
@@ -309,13 +309,13 @@ func (t *Teacher) deleteRef(c *echo.Context, kind string) error {
 		}
 		if exists {
 			return fail(c, http.StatusConflict, ErrConflict,
-				"Students still use this entry — delete is blocked.")
+				"Masih dipakai murid — penghapusan diblokir.")
 		}
-		noun := "class"
+		noun := "Kelas"
 		if kind == "jurusan" {
-			noun = "major"
+			noun = "Jurusan"
 		}
-		return fail(c, http.StatusNotFound, ErrNotFound, noun+" not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, noun+" tidak ditemukan.")
 	}
 	t.Store.Delete(cache.RefsKey(kind))
 	return ok(c, nil)

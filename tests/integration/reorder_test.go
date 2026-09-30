@@ -80,44 +80,44 @@ func TestReorderQuestionsValidation(t *testing.T) {
 	resp, body := postJSON(t,
 		fmt.Sprintf("%s/teacher/quiz/abc/questions/reorder", ts.URL),
 		map[string]any{"question_ids": []uint64{q1}}, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Invalid quiz id.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "ID kuis tidak valid.")
 
 	// unknown quiz → 404
 	resp, body = postJSON(t, reorderURL(ts, 999999),
 		map[string]any{"question_ids": []uint64{q1}}, ck)
-	assertFail(t, resp, body, http.StatusNotFound, "NOT_FOUND", "Quiz not found.")
+	assertFail(t, resp, body, http.StatusNotFound, "NOT_FOUND", "Kuis tidak ditemukan.")
 
 	// empty order
 	resp, body = postJSON(t, reorderURL(ts, quiz),
 		map[string]any{"question_ids": []uint64{}}, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Choose at least one question.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Pilih setidaknya satu pertanyaan.")
 
 	// zero id / non-numeric id
 	resp, body = postJSON(t, reorderURL(ts, quiz),
 		map[string]any{"question_ids": []uint64{0}}, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Invalid question id.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "ID pertanyaan tidak valid.")
 	resp, body = postJSON(t, reorderURL(ts, quiz),
 		map[string]any{"question_ids": []string{"abc"}}, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Invalid question id.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "ID pertanyaan tidak valid.")
 
 	// duplicate inside one payload
 	resp, body = postJSON(t, reorderURL(ts, quiz),
 		map[string]any{"question_ids": []uint64{q1, q1}}, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Duplicate question in the order.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Pertanyaan ganda dalam urutan.")
 
 	// a composed id missing from the payload
 	resp, body = postJSON(t, reorderURL(ts, quiz),
 		map[string]any{"question_ids": []uint64{q1}}, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Question order does not match this quiz.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Urutan pertanyaan tidak cocok dengan kuis ini.")
 
 	// a bank id that is not composed into this quiz
 	resp, body = postJSON(t, reorderURL(ts, quiz),
 		map[string]any{"question_ids": []uint64{q2, foreign}}, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Question order does not match this quiz.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Urutan pertanyaan tidak cocok dengan kuis ini.")
 
 	// malformed body
 	resp, body = postRaw(t, reorderURL(ts, quiz), "application/json", `{"question_ids": [`, ck)
-	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Invalid request body.")
+	assertFail(t, resp, body, http.StatusBadRequest, "VALIDATION", "Badan permintaan tidak valid.")
 
 	// none of the rejections wrote anything (all-or-nothing)
 	if seqs := composedSeqs(t, pool, quiz); seqs[q1] != 1 || seqs[q2] != 2 {
@@ -159,7 +159,7 @@ func TestReorderQuestionsValidation(t *testing.T) {
 	resp, body = postJSON(t, reorderURL(ts, quiz),
 		map[string]any{"question_ids": []uint64{q2, q1}}, ck)
 	assertFail(t, resp, body, http.StatusConflict, "CONFLICT",
-		"Quiz has participants or is active — editing is locked.")
+		"Kuis memiliki peserta atau sedang aktif — pengubahan dikunci.")
 	if seqs = composedSeqs(t, pool, quiz); seqs[q1] != 1 || seqs[q2] != 2 {
 		t.Fatalf("locked reorder changed seqs = %v", seqs)
 	}
@@ -232,7 +232,8 @@ func TestReorderQuestionOrderReachesStudent(t *testing.T) {
 	orderOn := storedQOrder(t, pool, pidOn)
 	counts := map[uint64]int{idsOn[0]: 2, idsOn[1]: 2, idsOn[2]: 2}
 	expected := quizengine.BuildOrder(
-		quizengine.SeedFor(pidOn, quizOn, uint64(attemptOn)), wantOn, counts, true, false)
+		quizengine.SeedFor(pidOn, quizOn, uint64(attemptOn)), wantOn, counts, true, false,
+	)
 	if attemptOff != 1 || attemptOn != 1 {
 		// both quizzes are fresh joins — the seed must stay attempt 1
 		t.Fatalf("attempt numbers = %d / %d, want both 1", attemptOff, attemptOn)

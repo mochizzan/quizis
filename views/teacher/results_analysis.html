@@ -2,13 +2,13 @@
 {{template "app_head" .}}
   <header class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
     <div>
-      <p class="text-body-secondary small mb-1">Question analysis</p>
+      <p class="text-body-secondary small mb-1">Analisis pertanyaan</p>
       <h1 class="h3 mb-0">{{.Judul}}</h1>
     </div>
     <div class="d-flex gap-2 flex-wrap">
-      <a class="btn btn-outline-secondary" href="/teacher/quiz/{{.ID}}"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>Back to quiz</a>
-      <a class="btn btn-outline-secondary" href="/teacher/quiz/{{.ID}}/results/export?format=csv" title="Download CSV" aria-label="Download CSV" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-filetype-csv" aria-hidden="true"></i></a>
-      <a class="btn btn-outline-secondary" href="/teacher/quiz/{{.ID}}/results/export?format=xlsx" title="Download XLSX" aria-label="Download XLSX" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-filetype-xlsx" aria-hidden="true"></i></a>
+      <a class="btn btn-outline-secondary" href="/teacher/quiz/{{.ID}}"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>Kembali ke kuis</a>
+      <a class="btn btn-outline-secondary" href="/teacher/quiz/{{.ID}}/results/export?format=csv" title="Unduh CSV" aria-label="Unduh CSV" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-filetype-csv" aria-hidden="true"></i></a>
+      <a class="btn btn-outline-secondary" href="/teacher/quiz/{{.ID}}/results/export?format=xlsx" title="Unduh XLSX" aria-label="Unduh XLSX" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-filetype-xlsx" aria-hidden="true"></i></a>
     </div>
   </header>
 
@@ -19,9 +19,9 @@
       <table class="table table-sm align-middle">
         <thead>
           <tr>
-            <th>#</th><th>Question</th>
-            <th class="text-end">Correct</th><th class="text-end">Wrong</th>
-            <th class="text-end">Unanswered</th><th>Most chosen</th>
+            <th>#</th><th>Pertanyaan</th>
+            <th class="text-end">Benar</th><th class="text-end">Salah</th>
+            <th class="text-end">Belum terjawab</th><th>Paling banyak dipilih</th>
           </tr>
         </thead>
         <tbody>
@@ -35,7 +35,7 @@
             <td>{{.MostChosen}}</td>
           </tr>
           {{else}}
-          <tr><td colspan="6" class="text-body-secondary">No questions yet.</td></tr>
+          <tr><td colspan="6" class="text-body-secondary">Belum ada pertanyaan.</td></tr>
           {{end}}
         </tbody>
       </table>

@@ -23,9 +23,9 @@ func TestLandingNavbarThreeMenusAndProfileIcon(t *testing.T) {
 		session  string
 		wantIcon string
 	}{
-		{"guest", "", `href="/login" aria-label="Sign in"`},
-		{"murid", stu.Value, `href="/student" aria-label="Dashboard murid"`},
-		{"guru", guru.Value, `href="/teacher" aria-label="Dashboard guru"`},
+		{"guest", "", `href="/login" aria-label="Masuk"`},
+		{"murid", stu.Value, `href="/student" aria-label="Dasbor murid"`},
+		{"guru", guru.Value, `href="/teacher" aria-label="Dasbor guru"`},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -100,7 +100,7 @@ func TestDashboardSidebarIsolationAndActiveState(t *testing.T) {
 			t.Errorf("murid sidebar missing %q", want)
 		}
 	}
-	for _, leak := range []string{`href="/teacher`, "Question Bank", "Reset Password"} {
+	for _, leak := range []string{`href="/teacher`, "Bank pertanyaan", "Permintaan ganti kata sandi"} {
 		if strings.Contains(body, leak) {
 			t.Errorf("murid dashboard leaks %q", leak)
 		}
@@ -180,7 +180,7 @@ func TestPublicPagesJoinFormAndChromeAccess(t *testing.T) {
 	if !strings.Contains(joinGuest, `id="join-form"`) {
 		t.Error("guest join page missing the join form")
 	}
-	for _, leak := range []string{"Active quizzes", `class="list-group`} {
+	for _, leak := range []string{"Kuis aktif", `class="list-group`} {
 		if strings.Contains(joinGuest, leak) {
 			t.Errorf("guest join page leaks %q", leak)
 		}

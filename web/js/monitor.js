@@ -108,7 +108,7 @@
     if (badge) badge.textContent = String(pending.length);
     list.textContent = "";
     if (!pending.length) {
-      list.appendChild(el("li", "list-group-item text-body-secondary", "Nobody is waiting."));
+      list.appendChild(el("li", "list-group-item text-body-secondary", "Tidak ada yang menunggu."));
       return;
     }
     pending.forEach(function (c) {
@@ -117,8 +117,8 @@
       row.setAttribute("data-pid", c.participant_id);
       row.appendChild(el("span", "", c.name));
       var actions = el("div", "d-flex gap-1");
-      [["approve", "btn btn-sm btn-outline-success", "check-lg", "Approve"],
-       ["reject", "btn btn-sm btn-outline-danger", "x-lg", "Reject"]]
+      [["approve", "btn btn-sm btn-outline-success", "check-lg", "Setujui"],
+       ["reject", "btn btn-sm btn-outline-danger", "x-lg", "Tolak"]]
         .forEach(function (spec) {
           var b = iconBtn(spec[1], spec[2], spec[3]);
           b.setAttribute("data-act", spec[0]);
@@ -135,7 +135,7 @@
     if (!wrap) return;
     wrap.textContent = "";
     if (!state.cards.length) {
-      wrap.appendChild(el("p", "text-body-secondary", "Nobody has joined yet."));
+      wrap.appendChild(el("p", "text-body-secondary", "Belum ada yang bergabung."));
       return;
     }
     var now = serverNow();
@@ -159,8 +159,8 @@
       var head = el("div", "d-flex justify-content-between align-items-center mb-1");
       head.appendChild(el("strong", "", c.name));
       var badges = el("span", "d-flex gap-1 align-items-center");
-      if (c.cheating) badges.appendChild(el("span", "badge text-bg-danger", "flagged"));
-      else if (v > 0) badges.appendChild(el("span", "badge text-bg-danger", v + " violation(s)"));
+      if (c.cheating) badges.appendChild(el("span", "badge text-bg-danger", "Ditandai"));
+      else if (v > 0) badges.appendChild(el("span", "badge text-bg-danger", v + " pelanggaran"));
       badges.appendChild(el("span", "badge text-bg-secondary", c.status));
       head.appendChild(badges);
       card.appendChild(head);
@@ -168,14 +168,14 @@
       var meta = el("div", "small text-body-secondary");
       var bits = [];
       // the live page: the pre-submit review or the current question
-      if (c.page === "preview") bits.push("Preview");
-      else if (c.current_q > 0) bits.push("Question " + c.current_q);
+      if (c.page === "preview") bits.push("Pratinjau");
+      else if (c.current_q > 0) bits.push("Pertanyaan " + c.current_q);
       // dwell ticks live on the question page (the preview has no own
       // since-clock — current_q_since still belongs to the question)
       if (c.status === "started" && c.current_q_since && c.page !== "preview") {
-        var dwell = el("span", "", "here " + mmss(now - c.current_q_since) + "s");
+        var dwell = el("span", "", "di sini " + mmss(now - c.current_q_since) + "s");
         dwell.setAttribute("data-live-since", c.current_q_since);
-        dwell.setAttribute("data-live-prefix", "here ");
+        dwell.setAttribute("data-live-prefix", "di sini ");
         dwell.setAttribute("data-live-suffix", "s");
         meta.appendChild(document.createTextNode(bits.join(" · ") + (bits.length ? " · " : "")));
         meta.appendChild(dwell);
@@ -185,18 +185,18 @@
         bits = [];
       }
       if (c.status === "started" && c.ends_at) {
-        var left = el("span", "", "left " + mmss(c.ends_at - now));
+        var left = el("span", "", "sisa " + mmss(c.ends_at - now));
         left.setAttribute("data-live-ends", c.ends_at);
         if (meta.textContent) meta.appendChild(document.createTextNode(" · "));
         meta.appendChild(left);
       }
       if (meta.textContent) meta.appendChild(document.createTextNode(" · "));
       meta.appendChild(document.createTextNode(c.connected
-        ? "connected"
-        : (c.status === "started" ? "connection lost" : "not connected")));
+        ? "tersambung"
+        : (c.status === "started" ? "koneksi terputus" : "tidak tersambung")));
       if (c.cheating && v > 0) {
         meta.appendChild(document.createTextNode(" · "));
-        meta.appendChild(el("span", "text-danger", v + " violation(s)"));
+        meta.appendChild(el("span", "text-danger", v + " pelanggaran"));
       }
       card.appendChild(meta);
 
@@ -206,16 +206,16 @@
         var spentLine = el("div", "small");
         var parts = [];
         (c.spent || []).forEach(function (s) {
-          parts.push("Q" + s.q + " " + mmss(s.sec));
+          parts.push("Pertanyaan " + s.q + " " + mmss(s.sec));
         });
         var running = c.status === "started" && c.current_q_since && c.current_q > 0;
         if (parts.length || running) {
-          if (parts.length) spentLine.textContent = "spent " + parts.join(" · ");
+          if (parts.length) spentLine.textContent = "terpakai " + parts.join(" · ");
           if (running) {
             if (parts.length) spentLine.appendChild(document.createTextNode(" · "));
-            var run = el("span", "", "Q" + c.current_q + " " + mmss(now - c.current_q_since));
+            var run = el("span", "", "Pertanyaan " + c.current_q + " " + mmss(now - c.current_q_since));
             run.setAttribute("data-live-since", c.current_q_since);
-            run.setAttribute("data-live-prefix", "Q" + c.current_q + " ");
+            run.setAttribute("data-live-prefix", "Pertanyaan " + c.current_q + " ");
             run.setAttribute("data-live-suffix", "");
             spentLine.appendChild(run);
           }
@@ -231,8 +231,8 @@
       // own question and never reads as the answer to the current one
       answer.textContent = atext
         ? (c.answer_question_pos > 0
-            ? "answer Q" + c.answer_question_pos + ": " + atext
-            : "answer: " + atext)
+            ? "jawaban pertanyaan " + c.answer_question_pos + ": " + atext
+            : "jawaban: " + atext)
         : "";
       answer.hidden = !atext;
       card.appendChild(answer);
@@ -248,10 +248,10 @@
       if (cheater) {
         var actions = el("div", "mt-2 d-flex gap-1");
         var toggle = iconBtn("btn btn-sm btn-outline-danger",
-          "exclamation-triangle", "Mark as cheating");
+          "exclamation-triangle", "Tandai melakukan kecurangan");
         toggle.setAttribute("data-act", "cheat_toggle");
         toggle.setAttribute("data-pid", c.participant_id);
-        var remove = iconBtn("btn btn-sm btn-danger", "person-dash", "Remove student");
+        var remove = iconBtn("btn btn-sm btn-danger", "person-dash", "Keluarkan murid");
         remove.setAttribute("data-act", "remove");
         remove.setAttribute("data-pid", c.participant_id);
         remove.setAttribute("data-name", c.name);
@@ -272,7 +272,7 @@
     list.textContent = "";
     if (!state.ranking.length) {
       list.appendChild(el("li", "list-group-item text-body-secondary",
-        "Ranking appears once answers arrive (if ranking_live is on)."));
+        "Peringkat muncul setelah jawaban masuk (jika ranking_live aktif)."));
       return;
     }
     state.ranking.forEach(function (e) {
@@ -280,8 +280,8 @@
         "list-group-item d-flex justify-content-between align-items-center" +
         (e.cheating ? " active" : ""));
       var label = e.name;
-      if (e.removed) label += " · removed";
-      if (e.cheating) label += " · flagged";
+      if (e.removed) label += " · dikeluarkan";
+      if (e.cheating) label += " · ditandai";
       li.appendChild(el("span", "", label));
       li.appendChild(el("span", "fw-semibold", (+e.score).toFixed(2)));
       list.appendChild(li);
@@ -315,12 +315,12 @@
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
       if (n.hasAttribute("data-live-ends")) {
-        n.textContent = "left " + mmss((+n.getAttribute("data-live-ends")) - now);
+        n.textContent = "sisa " + mmss((+n.getAttribute("data-live-ends")) - now);
       } else {
         // dwell ("here 0:12s") or a labelled clock ("Q2 0:12")
         var prefix = n.getAttribute("data-live-prefix");
         var suffix = n.getAttribute("data-live-suffix");
-        if (prefix === null) { prefix = "here "; suffix = "s"; }
+        if (prefix === null) { prefix = "di sini "; suffix = "s"; }
         n.textContent = prefix +
           mmss(now - (+n.getAttribute("data-live-since"))) + suffix;
       }
@@ -346,7 +346,7 @@
   // Messages ride through sessionStorage when the action reloads the page
   // (toast + reload would otherwise wipe the toast before it renders).
   function failThenReload(r) {
-    var msg = r && r.body && r.body.message ? r.body.message : "Request failed. Please try again.";
+    var msg = r && r.body && r.body.message ? r.body.message : "Permintaan gagal. Silakan coba lagi.";
     if (window.quizStoreFlash) quizStoreFlash("danger", msg);
     location.reload();
   }
@@ -380,19 +380,19 @@
       // stop ends the quiz for everyone — always a user decision (the
       // {confirm:true} body flag is for the server, not for the user)
       confirmThen(
-        "Stop the quiz now? Students stop answering immediately and the quiz ends.",
+        "Hentikan kuis sekarang? Murid berhenti menjawab seketika dan kuis berakhir.",
         function () {
           post("/teacher/quiz/" + quizID + "/stop", { confirm: true }).then(function (r) {
-            if (r.status === 200) doneThenReload("Quiz stopped — students can no longer answer.");
+            if (r.status === 200) doneThenReload("Kuis dihentikan — murid tidak dapat menjawab lagi.");
             else failThenReload(r);
           }).catch(function () {});
         }, "danger");
     } else if (act === "close") {
-      confirmThen("Close the quiz now? Students can no longer answer.",
+      confirmThen("Tutup kuis sekarang? Murid tidak dapat menjawab lagi.",
         function () {
           // per-question close: 409 {working:N} opens the count modal
           post("/teacher/quiz/" + quizID + "/status", { status: "selesai" }).then(function (r) {
-            if (r.status === 200) { doneThenReload("Quiz closed successfully."); return; }
+            if (r.status === 200) { doneThenReload("Kuis berhasil ditutup."); return; }
             var working = r.body && r.body.data ? r.body.data.working : undefined;
             if (working === undefined) { failThenReload(r); return; }
             var span = document.getElementById("close-working-count");
@@ -416,8 +416,8 @@
         else if (window.quizToast) {
           var nameEl = document.getElementById("remove-student-name");
           var who = nameEl ? nameEl.textContent : "";
-          quizToast("success", who ? "Student \"" + who + "\" removed from the quiz."
-            : "Student removed from the quiz.");
+          quizToast("success", who ? "Murid \"" + who + "\" dikeluarkan dari kuis."
+            : "Murid dikeluarkan dari kuis.");
         }
       }).catch(function () {});
     });
@@ -428,7 +428,7 @@
     closeBtn.addEventListener("click", function () {
       post("/teacher/quiz/" + quizID + "/status",
         { status: "selesai", confirm: true }).then(function (r) {
-          if (r.status === 200) doneThenReload("Quiz closed successfully.");
+          if (r.status === 200) doneThenReload("Kuis berhasil ditutup.");
           else failThenReload(r);
         }).catch(function () {});
     });

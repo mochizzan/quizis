@@ -4,10 +4,10 @@
        teacher.js (data-fetch) to the existing endpoint — on success
        teacher.js follows data-next back to the list with the stored
        success toast ({username} filled from the form). */ -}}
-<h1 class="h4 mb-3">Edit akun murid</h1>
+<h1 class="h4 mb-3">Ubah akun murid</h1>
 <div class="card">
   <div class="card-body">
-    <form action="/teacher/students/{{.U.ID}}/edit" method="post" data-fetch data-next="/teacher/students" data-success='Account "{username}" updated successfully.'>
+    <form action="/teacher/students/{{.U.ID}}/edit" method="post" data-fetch data-next="/teacher/students" data-success='Akun "{username}" berhasil diperbarui.'>
       <div class="mb-3">
         <label class="form-label" for="stu-username">Username</label>
         <input class="form-control" id="stu-username" name="username" maxlength="50" value="{{.U.Username}}" required>
@@ -36,7 +36,7 @@
       </div>
       <div class="d-flex gap-2 mt-3">
         <button class="btn btn-primary" type="submit"><i class="bi bi-check2 me-1" aria-hidden="true"></i>Simpan perubahan</button>
-        <a class="btn btn-outline-secondary" href="/teacher/students"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Cancel</a>
+        <a class="btn btn-outline-secondary" href="/teacher/students"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Batal</a>
       </div>
     </form>
   </div>

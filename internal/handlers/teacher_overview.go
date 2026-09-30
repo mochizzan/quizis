@@ -20,9 +20,10 @@ import (
 // Overview serves the filtered overview payload.
 func (t *Teacher) Overview(c *echo.Context) error {
 	f, err := analytics.ParseFilter(
-		c.QueryParam("kelas"), c.QueryParam("jurusan"), c.QueryParam("status"))
+		c.QueryParam("kelas"), c.QueryParam("jurusan"), c.QueryParam("status"),
+	)
 	if err != nil {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid filter value.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Nilai filter tidak valid.")
 	}
 	ov, err := t.buildOverview(c.Request().Context(), f)
 	if err != nil {

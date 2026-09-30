@@ -29,8 +29,10 @@ type exportRow struct {
 
 // exportHeaders mirrors the csv tags above, in order. The CSV writer appends
 // the dynamic Q<i> Answer / Q<i> Score pairs after these nine.
-var exportHeaders = []string{"Rank", "Name", "Username", "Class", "Major",
-	"Score", "Status", "Cheating", "Attempts"}
+var exportHeaders = []string{
+	"Peringkat", "Nama", "Username", "Kelas", "Jurusan",
+	"Nilai", "Status", "Kecurangan", "Percobaan",
+}
 
 // guardValue prefixes ' to anything a spreadsheet would otherwise parse as
 // a formula (spec §6.11 injection guard, both formats).
@@ -227,7 +229,8 @@ func essayAnswerText(raw string) string {
 // ones get an explicit 0 from fillUnansweredScores below. "Nilai Maks" on
 // Pertanyaan (100/total) shares these units.
 func loadExportAnswers(ctx context.Context, db *sql.DB, quizID uint64,
-	questions []exportQuestion) (answerCells, error) {
+	questions []exportQuestion,
+) (answerCells, error) {
 	essay := make(map[int]bool, len(questions))
 	for _, q := range questions {
 		essay[q.Seq] = q.Type == "essay"
@@ -299,7 +302,8 @@ func loadExportAnswers(ctx context.Context, db *sql.DB, quizID uint64,
 // Unscored (in-progress) attempts keep those cells blank, and an existing
 // row without a score (an essay awaiting grading) is left untouched.
 func fillUnansweredScores(results []resultRow, questions []exportQuestion,
-	cells answerCells) {
+	cells answerCells,
+) {
 	for _, r := range results {
 		if !r.Final.Valid && !r.Auto.Valid {
 			continue
@@ -328,7 +332,8 @@ func fillUnansweredScores(results []resultRow, questions []exportQuestion,
 // provides the RAW usernames answerCells is keyed by (rows hold guarded
 // display values).
 func writeExportCSV(w io.Writer, results []resultRow, rows []exportRow,
-	questions []exportQuestion, answers answerCells) error {
+	questions []exportQuestion, answers answerCells,
+) error {
 	if _, err := w.Write([]byte{0xEF, 0xBB, 0xBF}); err != nil {
 		return err
 	}
@@ -336,14 +341,14 @@ func writeExportCSV(w io.Writer, results []resultRow, rows []exportRow,
 
 	header := append([]string{}, exportHeaders...)
 	for i := range questions {
-		header = append(header, fmt.Sprintf("Q%d Answer", i+1), fmt.Sprintf("Q%d Score", i+1))
+		header = append(header, fmt.Sprintf("Q%d Jawaban", i+1), fmt.Sprintf("Q%d Nilai", i+1))
 	}
 	if err := enc.Write(header); err != nil {
 		return err
 	}
 
 	qrow := make([]string, len(header))
-	qrow[0] = "Question text"
+	qrow[0] = "Teks pertanyaan"
 	for i, q := range questions {
 		qrow[9+2*i] = guardValue(q.Text)
 	}
@@ -400,7 +405,7 @@ func (t *Teacher) ExportResults(c *echo.Context) error {
 		format = "csv"
 	}
 	if format != "csv" && format != "xlsx" {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid export format.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Format ekspor tidak valid.")
 	}
 	results, err := loadResults(ctx, t.DB, quiz.ID)
 	if err != nil {

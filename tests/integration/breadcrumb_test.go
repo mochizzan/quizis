@@ -11,7 +11,7 @@ import (
 // dashboard page must carry one.
 func crumbNav(t *testing.T, body string) string {
 	t.Helper()
-	i := strings.Index(body, `aria-label="breadcrumb"`)
+	i := strings.Index(body, `aria-label="Navigasi breadcrumb"`)
 	if i < 0 {
 		t.Fatal("page has no breadcrumb")
 	}
@@ -60,47 +60,47 @@ func TestDashboardBreadcrumbs(t *testing.T) {
 	// --- guru: the section roots ------------------------------------------
 	nav := get(t, "/teacher", guru.Value)
 	assertCrumbs(t, nav,
-		`breadcrumb-item">Dashboard</li>`,
+		`breadcrumb-item">Dasbor</li>`,
 		`breadcrumb-item active" aria-current="page">Guru<`)
 
 	nav = get(t, "/teacher/students", guru.Value)
 	assertCrumbs(t, nav,
-		`breadcrumb-item">Dashboard</li>`,
+		`breadcrumb-item">Dasbor</li>`,
 		`<a href="/teacher">Guru</a>`,
-		`breadcrumb-item active" aria-current="page">Manage Akun Murid<`)
+		`breadcrumb-item active" aria-current="page">Kelola akun murid<`)
 
 	nav = get(t, "/teacher/questions", guru.Value)
 	assertCrumbs(t, nav,
 		`<a href="/teacher">Guru</a>`,
-		`breadcrumb-item active" aria-current="page">Question Bank<`)
+		`breadcrumb-item active" aria-current="page">Bank pertanyaan<`)
 
 	// --- guru: the quiz subtree carries the real title ---------------------
 	qid := createQuiz(t, ts, guru, quizForm("Crumb Quiz Judul"))
 	nav = get(t, fmt.Sprintf("/teacher/quiz/%d", qid), guru.Value)
 	assertCrumbs(t, nav,
-		`<a href="/teacher/quiz">Quiz</a>`,
+		`<a href="/teacher/quiz">Kuis</a>`,
 		`breadcrumb-item active" aria-current="page">Crumb Quiz Judul<`)
 
 	nav = get(t, fmt.Sprintf("/teacher/quiz/%d/results", qid), guru.Value)
 	assertCrumbs(t, nav,
-		`<a href="/teacher/quiz">Quiz</a>`,
+		`<a href="/teacher/quiz">Kuis</a>`,
 		`<a href="/teacher/quiz/`+fmt.Sprint(qid)+`">Crumb Quiz Judul</a>`,
-		`breadcrumb-item active" aria-current="page">Results<`)
+		`breadcrumb-item active" aria-current="page">Hasil<`)
 
 	nav = get(t, fmt.Sprintf("/teacher/quiz/%d/grading", qid), guru.Value)
 	assertCrumbs(t, nav,
 		`<a href="/teacher/quiz/`+fmt.Sprint(qid)+`">Crumb Quiz Judul</a>`,
-		`breadcrumb-item active" aria-current="page">Grading<`)
+		`breadcrumb-item active" aria-current="page">Penilaian<`)
 
 	// --- murid: Beranda subtree -------------------------------------------
 	nav = get(t, "/student", stu.Value)
 	assertCrumbs(t, nav,
-		`breadcrumb-item">Dashboard</li>`,
+		`breadcrumb-item">Dasbor</li>`,
 		`breadcrumb-item active" aria-current="page">Beranda<`)
 
 	nav = get(t, "/history", stu.Value)
 	assertCrumbs(t, nav,
-		`breadcrumb-item">Dashboard</li>`,
+		`breadcrumb-item">Dasbor</li>`,
 		`<a href="/student">Beranda</a>`,
 		`breadcrumb-item active" aria-current="page">Riwayat<`)
 
@@ -127,7 +127,7 @@ func TestDashboardBreadcrumbs(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("GET /join = %d", resp.StatusCode)
 	}
-	if strings.Contains(body, `aria-label="breadcrumb"`) {
+	if strings.Contains(body, `aria-label="Navigasi breadcrumb"`) {
 		t.Error("public join page carries a dashboard breadcrumb")
 	}
 }

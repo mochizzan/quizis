@@ -50,8 +50,8 @@ func TestQuizListSearchFilterPagination(t *testing.T) {
 	if n := rows(home); n != 10 {
 		t.Errorf("default page rows = %d, want 10", n)
 	}
-	if !strings.Contains(home, "Showing 1&#x2013;10 of 12 results") &&
-		!strings.Contains(home, "Showing 1–10 of 12 results") {
+	if !strings.Contains(home, "Menampilkan 1&#x2013;10 dari 12 hasil") &&
+		!strings.Contains(home, "Menampilkan 1–10 dari 12 hasil") {
 		t.Errorf("count line missing: Showing 1–10 of 12 results")
 	}
 	if !strings.Contains(home, `class="pagination `) &&
@@ -67,7 +67,7 @@ func TestQuizListSearchFilterPagination(t *testing.T) {
 	if n := rows(search); n != 8 {
 		t.Errorf("q=Alpha rows = %d, want 8", n)
 	}
-	if !strings.Contains(search, "of 8 results") {
+	if !strings.Contains(search, "dari 8 hasil") {
 		t.Error("count line does not reflect the search (of 8 results)")
 	}
 	if strings.Contains(search, "Bravo") {
@@ -84,7 +84,7 @@ func TestQuizListSearchFilterPagination(t *testing.T) {
 	if n := rows(both); n != 3 {
 		t.Errorf("q=Alpha&status=aktif rows = %d, want 3", n)
 	}
-	if !strings.Contains(both, "of 3 results") {
+	if !strings.Contains(both, "dari 3 hasil") {
 		t.Error("combined count line missing (of 3 results)")
 	}
 	if strings.Contains(both, "Bravo") {
@@ -108,7 +108,7 @@ func TestQuizListSearchFilterPagination(t *testing.T) {
 	if n := rows(last); n != 2 {
 		t.Errorf("page=999 rows = %d, want 2 (clamped to last page)", n)
 	}
-	if !strings.Contains(last, "Showing 11") {
+	if !strings.Contains(last, "Menampilkan 11") {
 		t.Error("page=999 did not clamp to the last page")
 	}
 }
@@ -127,7 +127,7 @@ func TestQuizDeleteRedirectAndRowConfirm(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("GET detail = %d", resp.StatusCode)
 	}
-	want := `data-fetch data-confirm="Delete this quiz?" data-success="Quiz &quot;Hapus Saya&quot; deleted successfully." data-next="/teacher/quiz"`
+	want := `data-fetch data-confirm="Hapus kuis ini?" data-success="Kuis &quot;Hapus Saya&quot; berhasil dihapus." data-next="/teacher/quiz"`
 	if !strings.Contains(detail, want) {
 		t.Errorf("detail delete form missing %s", want)
 	}
@@ -139,8 +139,8 @@ func TestQuizDeleteRedirectAndRowConfirm(t *testing.T) {
 	}
 	for _, want := range []string{
 		`data-post="/teacher/quiz/` + idStr + `/delete"`,
-		`data-confirm="Hapus quiz &quot;Hapus Saya&quot;?`,
-		`data-success="Quiz &quot;Hapus Saya&quot; deleted successfully."`,
+		`data-confirm="Hapus kuis &quot;Hapus Saya&quot;?`,
+		`data-success="Kuis &quot;Hapus Saya&quot; berhasil dihapus."`,
 	} {
 		if !strings.Contains(list, want) {
 			t.Errorf("list row delete missing %s", want)

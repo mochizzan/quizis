@@ -8,14 +8,14 @@
 <div class="card">
   <div class="card-body">
     <form action="{{.Action}}" method="post" data-fetch data-next="{{.Action}}"
-          data-success="New {{if eq .Kind "kelas"}}class{{else}}major{{end}} &quot;{nama}&quot; added.">
+          data-success="{{if eq .Kind "kelas"}}Kelas{{else}}Jurusan{{end}} baru &quot;{nama}&quot; berhasil ditambahkan.">
       <div class="mb-3">
         <label class="form-label" for="nama">{{.NameLabel}}</label>
         <input class="form-control" id="nama" name="nama" maxlength="50" required>
       </div>
       <div class="d-flex gap-2">
-        <button class="btn btn-primary" type="submit"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add</button>
-        <a class="btn btn-outline-secondary" href="{{.Action}}"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Cancel</a>
+        <button class="btn btn-primary" type="submit"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Tambah</button>
+        <a class="btn btn-outline-secondary" href="{{.Action}}"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Batal</a>
       </div>
     </form>
   </div>

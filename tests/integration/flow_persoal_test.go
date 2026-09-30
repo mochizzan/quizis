@@ -77,7 +77,8 @@ func answerRow(t *testing.T, pool *sql.DB, pid, qid uint64) (string, sql.NullInt
 // persoalFixture builds an ACTIVE per_soal quiz with n pg questions and joins
 // the student; returns (code, question ids in seq order).
 func persoalFixture(t *testing.T, ts *httptest.Server, pool *sql.DB, ck, st *http.Cookie,
-	title string, questions []string, joinMode string) (string, []uint64) {
+	title string, questions []string, joinMode string,
+) (string, []uint64) {
 	t.Helper()
 	form := quizForm(title)
 	form.Set("timer_type", "per_soal")
@@ -187,17 +188,17 @@ func TestPerQuestionStartAnswerFinishFlow(t *testing.T) {
 	// --- validation branches
 	if resp, body := answerPost(t, ts, code, st, q1, []int{7}); resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("out-of-range = %d: %s", resp.StatusCode, body)
-	} else if env := decodeEnv(t, body); env.Message != "Invalid option." {
+	} else if env := decodeEnv(t, body); env.Message != "Pilihan tidak valid." {
 		t.Fatalf("out-of-range message = %q", env.Message)
 	}
 	if resp, body := answerPost(t, ts, code, st, q1, []float64{}); resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("empty answer = %d: %s", resp.StatusCode, body)
-	} else if env := decodeEnv(t, body); env.Message != "Select at least one option." {
+	} else if env := decodeEnv(t, body); env.Message != "Pilih setidaknya satu pilihan." {
 		t.Fatalf("empty message = %q", env.Message)
 	}
 	if resp, body := answerPost(t, ts, code, st, q1, "nope"); resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("string answer = %d: %s", resp.StatusCode, body)
-	} else if env := decodeEnv(t, body); env.Message != "Invalid answer format." {
+	} else if env := decodeEnv(t, body); env.Message != "Format jawaban tidak valid." {
 		t.Fatalf("string message = %q", env.Message)
 	}
 	if resp, body := answerPost(t, ts, code, st, 999999, []int{0}); resp.StatusCode != http.StatusNotFound {
@@ -224,7 +225,7 @@ func TestPerQuestionStartAnswerFinishFlow(t *testing.T) {
 	if resp.StatusCode != http.StatusGone {
 		t.Fatalf("answer after close = %d, want 410 (body %s)", resp.StatusCode, body)
 	}
-	if env := decodeEnv(t, body); env.Error != "QUIZ_ENDED" || env.Message != "This quiz has ended." {
+	if env := decodeEnv(t, body); env.Error != "QUIZ_ENDED" || env.Message != "Kuis ini sudah berakhir." {
 		t.Fatalf("close error = %q / %q", env.Error, env.Message)
 	}
 	if raw, _, _ := answerRow(t, pool, pid, q2); raw != "[1]" {
@@ -352,7 +353,7 @@ func TestNextNavigationAndFreeModeGuard(t *testing.T) {
 	if resp.StatusCode != http.StatusConflict {
 		t.Fatalf("next on linear = %d, want 409 (body %s)", resp.StatusCode, body)
 	}
-	if env := decodeEnv(t, body); env.Message != "This quiz does not use free navigation." {
+	if env := decodeEnv(t, body); env.Message != "Kuis ini tidak mengizinkan navigasi bebas." {
 		t.Fatalf("linear next message = %q", env.Message)
 	}
 }
@@ -377,7 +378,7 @@ func TestAnswerAfterTimerExpiry(t *testing.T) {
 	if resp.StatusCode != http.StatusGone {
 		t.Fatalf("expired answer = %d, want 410 (body %s)", resp.StatusCode, body)
 	}
-	if env := decodeEnv(t, body); env.Error != "QUIZ_ENDED" || env.Message != "This quiz has ended." {
+	if env := decodeEnv(t, body); env.Error != "QUIZ_ENDED" || env.Message != "Kuis ini sudah berakhir." {
 		t.Fatalf("expired error = %q / %q", env.Error, env.Message)
 	}
 	quizID := func() uint64 {
@@ -526,7 +527,7 @@ func TestEssayAnswerContract(t *testing.T) {
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("empty essay = %d: %s", resp.StatusCode, body)
 	}
-	if env := decodeEnv(t, body); env.Message != "Answer is required." {
+	if env := decodeEnv(t, body); env.Message != "Jawaban wajib diisi." {
 		t.Fatalf("empty essay message = %q", env.Message)
 	}
 	// wrong encoding → 400
@@ -594,7 +595,7 @@ func TestVisibilityReporting(t *testing.T) {
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("bad kind = %d: %s", resp.StatusCode, body)
 	}
-	if env := decodeEnv(t, body); env.Message != "Unknown event kind." {
+	if env := decodeEnv(t, body); env.Message != "Jenis peristiwa tidak dikenal." {
 		t.Fatalf("bad kind message = %q", env.Message)
 	}
 }
@@ -649,7 +650,7 @@ func TestCloseWithWorkingModal(t *testing.T) {
 		t.Fatalf("unconfirmed close = %d: %s", resp.StatusCode, body)
 	}
 	env := decodeEnv(t, body)
-	if env.Message != "2 students are still working — close anyway?" {
+	if env.Message != "2 murid masih mengerjakan — tetap tutup?" {
 		t.Fatalf("modal message = %q", env.Message)
 	}
 	var wd struct {
@@ -728,7 +729,7 @@ func TestCloseWithWorkingModal(t *testing.T) {
 	if resp.StatusCode != http.StatusConflict {
 		t.Fatalf("second close = %d, want 409: %s", resp.StatusCode, body)
 	}
-	if env := decodeEnv(t, body); env.Message != "This quiz is not running." {
+	if env := decodeEnv(t, body); env.Message != "Kuis ini tidak sedang berjalan." {
 		t.Fatalf("second close message = %q", env.Message)
 	}
 	if got := quizStatus(t, pool, quizID); got != "selesai" {
@@ -763,7 +764,7 @@ func TestAttemptLimitThroughFinish(t *testing.T) {
 	}
 
 	resp, body := postJoin(t, ts, code, st)
-	assertFail(t, resp, body, http.StatusConflict, handlers.ErrAttemptLimit, "You have no attempts left.")
+	assertFail(t, resp, body, http.StatusConflict, handlers.ErrAttemptLimit, "Anda tidak punya sisa percobaan.")
 }
 
 // TestPerQuestionDisconnectFreezeAndResume pins spec §11.16 for the

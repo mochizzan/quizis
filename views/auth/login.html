@@ -3,21 +3,21 @@
   <div class="col-sm-8 col-md-5 col-lg-4">
     <div class="card">
       <div class="card-body p-4">
-        <h1 class="h5 mb-3">Sign in</h1>
+        <h1 class="h5 mb-3">Masuk</h1>
         <form action="/login" method="post">
           <div class="mb-3">
-            <label class="form-label" for="identity">Username or email</label>
+            <label class="form-label" for="identity">Username atau email</label>
             <input class="form-control" id="identity" name="identity" autocomplete="username" value="{{.Identity}}" required autofocus>
           </div>
           <div class="mb-3">
-            <label class="form-label" for="password">Password</label>
+            <label class="form-label" for="password">Kata sandi</label>
             <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required>
           </div>
-          <button class="btn btn-primary w-100" type="submit"><i class="bi bi-box-arrow-in-right me-2" aria-hidden="true"></i>Sign in</button>
+          <button class="btn btn-primary w-100" type="submit"><i class="bi bi-box-arrow-in-right me-2" aria-hidden="true"></i>Masuk</button>
         </form>
         <div class="d-flex justify-content-between mt-3">
-          <a href="/register">Register</a>
-          <a href="/forgot-password">Forgot password</a>
+          <a href="/register">Daftar</a>
+          <a href="/forgot-password">Lupa kata sandi</a>
         </div>
       </div>
     </div>

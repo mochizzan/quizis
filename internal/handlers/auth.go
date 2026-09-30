@@ -26,17 +26,17 @@ import (
 // verbatim for BOTH unknown-user and wrong-password so the two cases are
 // indistinguishable (spec §8).
 const (
-	MsgLoginFailed      = "Invalid username/email or password."
-	MsgForgotNoMatch    = "No account matches those details."
-	MsgTaken            = "Username or email already registered."
-	MsgShortPassword    = "Password must be at least 8 characters."
-	MsgRequired         = "Please fill in all fields."
-	MsgPasswordMismatch = "Passwords do not match."
-	MsgForgotSent       = "Request submitted. Your teacher will review it."
-	MsgRegistered       = "Account created. Sign in to continue."
+	MsgLoginFailed      = "Username/email atau kata sandi tidak valid."
+	MsgForgotNoMatch    = "Tidak ada akun yang cocok dengan data tersebut."
+	MsgTaken            = "Username atau email sudah terdaftar."
+	MsgShortPassword    = "Kata sandi minimal 8 karakter."
+	MsgRequired         = "Silakan isi semua kolom."
+	MsgPasswordMismatch = "Kata sandi tidak sama."
+	MsgForgotSent       = "Permintaan dikirim. Guru Anda akan meninjaunya."
+	MsgRegistered       = "Akun dibuat. Masuk untuk melanjutkan."
 	// MsgLoginInactive is only reachable AFTER the password matched (or the
 	// forced-change flag skipped it): a stranger still sees MsgLoginFailed.
-	MsgLoginInactive = "This account is deactivated. Contact your teacher."
+	MsgLoginInactive = "Akun ini dinonaktifkan. Hubungi guru Anda."
 )
 
 // Auth serves the auth routes; methods are split across auth.go and
@@ -58,7 +58,7 @@ func (a *Auth) LoginPage(c *echo.Context) error {
 }
 
 func loginData(identity, errMsg string) map[string]any {
-	m := map[string]any{"Title": "Sign in", "Identity": identity}
+	m := map[string]any{"Title": "Masuk", "Identity": identity}
 	if errMsg != "" {
 		m["Flash"] = flash("danger", errMsg)
 	}
@@ -88,11 +88,13 @@ func (a *Auth) Login(c *echo.Context) error {
 		must  bool
 		aktif bool
 	)
-	err := a.DB.QueryRowContext(ctx,
+	err := a.DB.QueryRowContext(
+		ctx,
 		`SELECT id, password_hash, must_change_pw, aktif FROM users WHERE username = ?`, identity,
 	).Scan(&uid, &hash, &must, &aktif)
 	if err == sql.ErrNoRows {
-		err = a.DB.QueryRowContext(ctx,
+		err = a.DB.QueryRowContext(
+			ctx,
 			`SELECT id, password_hash, must_change_pw, aktif FROM users WHERE email = ?`, identity,
 		).Scan(&uid, &hash, &must, &aktif)
 	}
@@ -214,7 +216,7 @@ func (a *Auth) registerForm(c *echo.Context, status int, errMsg, nama, username,
 		return err
 	}
 	data := map[string]any{
-		"Title": "Register", "Classes": classes, "Majors": majors,
+		"Title": "Daftar", "Classes": classes, "Majors": majors,
 		"Nama": nama, "Username": username, "Email": email,
 	}
 	if errMsg != "" {
@@ -285,7 +287,7 @@ func isDuplicateKey(err error) bool {
 // --- GET /forgot-password -------------------------------------------------
 
 func (a *Auth) ForgotPage(c *echo.Context) error {
-	data := map[string]any{"Title": "Forgot password"}
+	data := map[string]any{"Title": "Lupa kata sandi"}
 	if c.QueryParam("sent") == "1" {
 		data["Success"] = MsgForgotSent // hides the form
 		data["Flash"] = flash("success", MsgForgotSent)
@@ -301,27 +303,30 @@ func (a *Auth) Forgot(c *echo.Context) error {
 	nama := strings.TrimSpace(c.FormValue("nama"))
 
 	var uid uint64
-	err := a.DB.QueryRowContext(c.Request().Context(),
+	err := a.DB.QueryRowContext(
+		c.Request().Context(),
 		`SELECT id FROM users WHERE (username = ? OR email = ?) AND nama_lengkap = ?`,
 		identity, identity, nama,
 	).Scan(&uid)
 	if err == sql.ErrNoRows {
 		return c.Render(http.StatusBadRequest, "page-forgot",
-			map[string]any{"Title": "Forgot password", "Flash": flash("danger", MsgForgotNoMatch)})
+			map[string]any{"Title": "Lupa kata sandi", "Flash": flash("danger", MsgForgotNoMatch)})
 	}
 	if err != nil {
 		return err
 	}
 
 	var pending int
-	if err := a.DB.QueryRowContext(c.Request().Context(),
+	if err := a.DB.QueryRowContext(
+		c.Request().Context(),
 		`SELECT COUNT(*) FROM password_resets WHERE user_id = ? AND status = 'pending'`,
 		uid,
 	).Scan(&pending); err != nil {
 		return err
 	}
 	if pending == 0 {
-		if _, err := a.DB.ExecContext(c.Request().Context(),
+		if _, err := a.DB.ExecContext(
+			c.Request().Context(),
 			`INSERT INTO password_resets (user_id, input_username, input_nama) VALUES (?, ?, ?)`,
 			uid, identity, nama,
 		); err != nil {
@@ -341,7 +346,7 @@ func (a *Auth) ChangePasswordPage(c *echo.Context) error {
 	if s.Role != "murid" || !s.MustChangePW {
 		return c.Redirect(http.StatusFound, "/")
 	}
-	return c.Render(200, "page-change-password", map[string]any{"Title": "Change password"})
+	return c.Render(200, "page-change-password", map[string]any{"Title": "Ubah kata sandi"})
 }
 
 func (a *Auth) ChangePassword(c *echo.Context) error {
@@ -351,10 +356,10 @@ func (a *Auth) ChangePassword(c *echo.Context) error {
 	}
 	if s.Role != "murid" {
 		return c.Render(http.StatusForbidden, "page-change-password",
-			map[string]any{"Title": "Change password", "Flash": flash("danger", "You are not allowed to change this password.")})
+			map[string]any{"Title": "Ubah kata sandi", "Flash": flash("danger", "Anda tidak diizinkan mengubah kata sandi ini.")})
 	}
 	data := func(msg string) map[string]any {
-		return map[string]any{"Title": "Change password", "Flash": flash("danger", msg)}
+		return map[string]any{"Title": "Ubah kata sandi", "Flash": flash("danger", msg)}
 	}
 	two := c.FormValue("password")
 	confirm := c.FormValue("confirm")
@@ -384,9 +389,10 @@ func (a *Auth) ChangePassword(c *echo.Context) error {
 	if n, _ := res.RowsAffected(); n == 0 {
 		tx.Rollback()
 		return c.Render(http.StatusForbidden, "page-change-password",
-			data("Account no longer exists."))
+			data("Akun sudah tidak ada."))
 	}
-	if _, err := tx.ExecContext(ctx,
+	if _, err := tx.ExecContext(
+		ctx,
 		`UPDATE password_resets SET status = 'selesai' WHERE user_id = ? AND status = 'disetujui'`,
 		s.UserID,
 	); err != nil {

@@ -53,7 +53,7 @@ func (s *Streams) StudentStream(c *echo.Context) error {
 	}
 	if !member {
 		return fail(c, http.StatusForbidden, ErrForbidden,
-			"You are not a participant of this quiz.")
+			"Anda bukan peserta kuis ini.")
 	}
 	// the latest attempt owns this connection (join never creates a row
 	// after a removed one, so it is the one the membership check saw)
@@ -110,7 +110,7 @@ func (s *Streams) announcePresence(quizID, pid, userID uint64) {
 func (s *Streams) TeacherMonitorStream(c *echo.Context) error {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		return fail(c, http.StatusNotFound, ErrNotFound, "Quiz not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan.")
 	}
 	var exists bool
 	if err := s.DB.QueryRowContext(c.Request().Context(),
@@ -118,7 +118,7 @@ func (s *Streams) TeacherMonitorStream(c *echo.Context) error {
 		return err
 	}
 	if !exists {
-		return fail(c, http.StatusNotFound, ErrNotFound, "Quiz not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan.")
 	}
 	ctx := c.Request().Context()
 	return s.Hub.Handler(
@@ -129,7 +129,7 @@ func (s *Streams) TeacherMonitorStream(c *echo.Context) error {
 	)(c)
 }
 
-const msgSignInStream = "Sign in to open this stream."
+const msgSignInStream = "Masuk untuk membuka aliran ini."
 
 // requireSession is the SSE auth gate: the session cookie must still resolve.
 // Re-checked after the handler pre-checks so a revoked session cannot open

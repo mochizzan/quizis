@@ -2,7 +2,7 @@
 <header class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
   <div>
     <p class="text-body-secondary small mb-1">Guru</p>
-    <h1 class="h4 mb-0">Manage Akun Murid</h1>
+    <h1 class="h4 mb-0">Kelola akun murid</h1>
   </div>
   <span class="badge text-bg-secondary align-self-center">{{.Table.Total}} akun</span>
 </header>
@@ -11,14 +11,14 @@
 <div class="btn-group btn-group-sm mb-3" role="group" aria-label="Filter status">
   <a class="btn {{if not .Status}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/students{{if .Table.Q}}?q={{urlquery .Table.Q}}{{end}}">Semua</a>
   <a class="btn {{if eq .Status "aktif"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/students?status=aktif{{if .Table.Q}}&q={{urlquery .Table.Q}}{{end}}">Aktif</a>
-  <a class="btn {{if eq .Status "nonaktif"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/students?status=nonaktif{{if .Table.Q}}&q={{urlquery .Table.Q}}{{end}}">Nonaktif</a>
+  <a class="btn {{if eq .Status "nonaktif"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/students?status=nonaktif{{if .Table.Q}}&q={{urlquery .Table.Q}}{{end}}">Tidak aktif</a>
 </div>
 
 {{- /* #table-results is the toolbar live-search swap target: filter links,
        empty state, rows and pagination re-render together. */ -}}
 <div id="table-results">
 {{if not .Table.Total}}
-<p class="text-body-secondary">{{if or .Table.Q .Table.Params}}No results match your search.{{else}}Belum ada akun murid.{{end}}</p>
+<p class="text-body-secondary">{{if or .Table.Q .Table.Params}}Tidak ada hasil yang cocok dengan pencarian Anda.{{else}}Belum ada akun murid.{{end}}</p>
 {{else}}
 <div class="card">
   <div class="card-body">
@@ -45,27 +45,27 @@
             <td>{{.Jurusan}}</td>
             <td>
               {{if .Aktif}}<span class="badge text-bg-success">Aktif</span>
-              {{else}}<span class="badge text-bg-secondary">Nonaktif</span>{{end}}
+              {{else}}<span class="badge text-bg-secondary">Tidak aktif</span>{{end}}
             </td>
             <td class="text-end text-nowrap">
               <a class="btn btn-sm btn-outline-secondary" href="/teacher/students/{{.ID}}/edit"
-                 title="Edit" aria-label="Edit" data-quiz-tooltip><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                 title="Ubah" aria-label="Ubah" data-quiz-tooltip><i class="bi bi-pencil" aria-hidden="true"></i></a>
               {{if .Aktif}}
               <button type="button" class="btn btn-sm btn-outline-warning"
                       data-post="/teacher/students/{{.ID}}/deactivate"
                       data-confirm="Nonaktifkan akun {{.Username}}? Murid ini tidak akan bisa login."
-                      data-success="Account &quot;{{.Username}}&quot; deactivated."
+                      data-success="Akun &quot;{{.Username}}&quot; dinonaktifkan."
                       title="Nonaktifkan" aria-label="Nonaktifkan" data-bs-toggle="tooltip"><i class="bi bi-person-slash" aria-hidden="true"></i></button>
               {{else}}
               <button type="button" class="btn btn-sm btn-outline-success"
                       data-post="/teacher/students/{{.ID}}/activate"
-                      data-success="Account &quot;{{.Username}}&quot; activated."
+                      data-success="Akun &quot;{{.Username}}&quot; diaktifkan."
                       title="Aktifkan" aria-label="Aktifkan" data-bs-toggle="tooltip"><i class="bi bi-person-check" aria-hidden="true"></i></button>
               {{end}}
               <button type="button" class="btn btn-sm btn-outline-danger"
                       data-post="/teacher/students/{{.ID}}/delete"
                       data-confirm="Hapus akun {{.Username}}? Seluruh data percobaannya ikut terhapus. Tindakan ini tidak bisa dibatalkan."
-                      data-success="Account &quot;{{.Username}}&quot; deleted successfully."
+                      data-success="Akun &quot;{{.Username}}&quot; berhasil dihapus."
                       title="Hapus" aria-label="Hapus" data-bs-toggle="tooltip"><i class="bi bi-trash3" aria-hidden="true"></i></button>
             </td>
           </tr>

@@ -36,9 +36,9 @@ func Breadcrumbs(path string) []Crumb {
 // detail page itself — the title is then the current crumb.
 func QuizCrumbs(id uint64, judul, section string) []Crumb {
 	crumbs := []Crumb{
-		{Label: "Dashboard"},
+		{Label: "Dasbor"},
 		{Label: "Guru", URL: "/teacher"},
-		{Label: "Quiz", URL: "/teacher/quiz"},
+		{Label: "Kuis", URL: "/teacher/quiz"},
 		{Label: judul, URL: "/teacher/quiz/" + strconv.FormatUint(id, 10)},
 	}
 	if section == "" {
@@ -51,7 +51,7 @@ func QuizCrumbs(id uint64, judul, section string) []Crumb {
 // AttemptCrumbs is the /history/:id hierarchy with the quiz title.
 func AttemptCrumbs(judul string) []Crumb {
 	return []Crumb{
-		{Label: "Dashboard"},
+		{Label: "Dasbor"},
 		{Label: "Beranda", URL: "/student"},
 		{Label: "Riwayat", URL: "/history"},
 		{Label: judul},
@@ -61,7 +61,7 @@ func AttemptCrumbs(judul string) []Crumb {
 // guruCrumbs walks /teacher/<segments>: Dashboard / Guru / section…, the
 // last crumb current (no link), every parent linking to its own route.
 func guruCrumbs(path string) []Crumb {
-	crumbs := []Crumb{{Label: "Dashboard"}, {Label: "Guru", URL: "/teacher"}}
+	crumbs := []Crumb{{Label: "Dasbor"}, {Label: "Guru", URL: "/teacher"}}
 	rest := strings.Trim(strings.TrimPrefix(path, "/teacher"), "/")
 	if rest == "" { // /teacher itself — Guru is the current page
 		crumbs[len(crumbs)-1].URL = ""
@@ -83,44 +83,44 @@ func guruCrumbs(path string) []Crumb {
 func guruSection(seg string, segs []string, i int) string {
 	switch seg {
 	case "students":
-		return "Manage Akun Murid"
+		return "Kelola akun murid"
 	case "questions":
-		return "Question Bank"
+		return "Bank pertanyaan"
 	case "classes":
-		return "Classes"
+		return "Kelas"
 	case "majors":
-		return "Majors"
+		return "Jurusan"
 	case "password-resets":
-		return "Reset Password"
+		return "Permintaan ganti kata sandi"
 	case "quiz":
-		return "Quiz"
+		return "Kuis"
 	case "new":
 		if i > 0 {
 			switch segs[i-1] {
 			case "questions":
-				return "New question"
+				return "Pertanyaan baru"
 			case "classes":
-				return "New class"
+				return "Kelas baru"
 			case "majors":
-				return "New major"
+				return "Jurusan baru"
 			}
 		}
-		return "New quiz"
+		return "Kuis baru"
 	case "edit":
 		if i > 0 && segs[i-1] == "questions" {
-			return "Edit question"
+			return "Ubah pertanyaan"
 		}
-		return "Edit"
+		return "Ubah"
 	case "results":
-		return "Results"
+		return "Hasil"
 	case "grading":
-		return "Grading"
+		return "Penilaian"
 	case "monitor":
-		return "Monitor"
+		return "Pemantauan"
 	}
 	// /teacher/quiz/<id> — the four quiz pages override this with the title
 	if i > 0 && segs[i-1] == "quiz" && isDigits(seg) {
-		return "Quiz #" + seg
+		return "Kuis #" + seg
 	}
 	return seg
 }
@@ -129,7 +129,7 @@ func guruSection(seg string, segs []string, i int) string {
 // Beranda current; /history/:id defaults to a generic tail for the (title-
 // overridden) attempt page.
 func muridCrumbs(path string) []Crumb {
-	crumbs := []Crumb{{Label: "Dashboard"}, {Label: "Beranda", URL: "/student"}}
+	crumbs := []Crumb{{Label: "Dasbor"}, {Label: "Beranda", URL: "/student"}}
 	switch {
 	case path == "/student":
 		crumbs[1].URL = "" // Beranda is the current page

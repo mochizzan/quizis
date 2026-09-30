@@ -14,8 +14,10 @@ var (
 		{ID: 1, Nama: "Grade 10"}, {ID: 2, Nama: "Grade 11"}, {ID: 3, Nama: "Grade 12"},
 	}
 	ovJurusan = []analytics.Ref{
-		{ID: 1, Nama: "Science"}, {ID: 2, Nama: "Social"},
-		{ID: 3, Nama: "Language"}, {ID: 4, Nama: "Vocational"},
+		{ID: 1, Nama: "Science"},
+		{ID: 2, Nama: "Social"},
+		{ID: 3, Nama: "Language"},
+		{ID: 4, Nama: "Vocational"},
 	}
 )
 
@@ -30,10 +32,16 @@ func TestParseFilter(t *testing.T) {
 	}{
 		{"all params absent", "", "", "", analytics.Filter{}, false},
 		{"explicit zero kelas means no filter", "0", "", "", analytics.Filter{}, false},
-		{"numeric ids and valid status", "2", "3", "berjalan",
-			analytics.Filter{Kelas: 2, Jurusan: 3, Status: "berjalan"}, false},
-		{"unknown numeric id passes (matches nothing)", "999", "", "",
-			analytics.Filter{Kelas: 999}, false},
+		{
+			"numeric ids and valid status", "2", "3", "berjalan",
+			analytics.Filter{Kelas: 2, Jurusan: 3, Status: "berjalan"},
+			false,
+		},
+		{
+			"unknown numeric id passes (matches nothing)", "999", "", "",
+			analytics.Filter{Kelas: 999},
+			false,
+		},
 		{"status selesai valid", "", "", "selesai", analytics.Filter{Status: "selesai"}, false},
 		{"status nonaktif valid", "", "", "nonaktif", analytics.Filter{Status: "nonaktif"}, false},
 		{"non-numeric kelas", "abc", "", "", analytics.Filter{}, true},
@@ -77,7 +85,8 @@ func TestBuildEmptyInputsAreAllZeros(t *testing.T) {
 	}
 	// every ref row is still emitted, with label order and zero value
 	wantKelas := []analytics.KV{
-		{Label: "Grade 10"}, {Label: "Grade 11"}, {Label: "Grade 12"}}
+		{Label: "Grade 10"}, {Label: "Grade 11"}, {Label: "Grade 12"},
+	}
 	if len(ov.PerKelas) != 3 || ov.PerKelas[0] != wantKelas[0] ||
 		ov.PerKelas[1] != wantKelas[1] || ov.PerKelas[2] != wantKelas[2] {
 		t.Errorf("per_kelas = %+v, want every ref row with value 0", ov.PerKelas)
@@ -107,11 +116,11 @@ func TestBuildEmptyInputsAreAllZeros(t *testing.T) {
 	}
 	// the status option list is part of the pinned contract
 	wantStatus := []analytics.StatusOption{
-		{Value: "", Label: "All"},
-		{Value: "aktif", Label: "Active"},
-		{Value: "berjalan", Label: "Running"},
-		{Value: "selesai", Label: "Finished"},
-		{Value: "nonaktif", Label: "Not active"},
+		{Value: "", Label: "Semua"},
+		{Value: "aktif", Label: "Aktif"},
+		{Value: "berjalan", Label: "Berjalan"},
+		{Value: "selesai", Label: "Selesai"},
+		{Value: "nonaktif", Label: "Tidak aktif"},
 	}
 	if len(ov.Filters.Status) != len(wantStatus) {
 		t.Fatalf("status options = %+v", ov.Filters.Status)
@@ -184,17 +193,34 @@ func TestBuildUserFiltersCrossApplied(t *testing.T) {
 		wantPerJurusan []int
 	}{
 		{"default", analytics.Filter{}, 3, 1, []int{1, 1, 1}, []int{2, 1, 0, 0}},
-		{"kelas narrows summary and both charts",
-			analytics.Filter{Kelas: 2}, 1, 0, []int{0, 1, 0}, []int{0, 1, 0, 0}},
-		{"jurusan cross-filters the per-kelas chart",
-			analytics.Filter{Jurusan: 1}, 2, 1, []int{1, 0, 1}, []int{2, 0, 0, 0}},
-		{"status never touches the users charts",
-			analytics.Filter{Status: "aktif"}, 3, 1, []int{1, 1, 1}, []int{2, 1, 0, 0}},
+		{
+			"kelas narrows summary and both charts",
+			analytics.Filter{Kelas: 2},
+			1, 0,
+			[]int{0, 1, 0},
+			[]int{0, 1, 0, 0},
+		},
+		{
+			"jurusan cross-filters the per-kelas chart",
+			analytics.Filter{Jurusan: 1},
+			2, 1,
+			[]int{1, 0, 1},
+			[]int{2, 0, 0, 0},
+		},
+		{
+			"status never touches the users charts",
+			analytics.Filter{Status: "aktif"},
+			3, 1,
+			[]int{1, 1, 1},
+			[]int{2, 1, 0, 0},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			ov := analytics.Build(analytics.Input{Filter: tc.filter, Users: users,
-				Kelas: ovKelas, Jurusan: ovJurusan})
+			ov := analytics.Build(analytics.Input{
+				Filter: tc.filter, Users: users,
+				Kelas: ovKelas, Jurusan: ovJurusan,
+			})
 			if ov.Summary.TotalMurid != tc.wantTotal ||
 				ov.Summary.MuridNonaktif != tc.wantInactive {
 				t.Errorf("total/nonaktif = %d/%d, want %d/%d",

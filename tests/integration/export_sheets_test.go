@@ -93,7 +93,8 @@ func exportFixture(t *testing.T) (*httptest.Server, *http.Cookie, *sql.DB, uint6
 // is_correct IS NULL): GradeAnswer stores the raw 0–100 score and computes
 // final_score = score_auto + score/total.
 func gradeEssay(t *testing.T, ts *httptest.Server, pool *sql.DB,
-	ck *http.Cookie, quizID uint64, score float64) {
+	ck *http.Cookie, quizID uint64, score float64,
+) {
 	t.Helper()
 	var answerID uint64
 	if err := pool.QueryRow(`SELECT a.id FROM answers a
@@ -213,12 +214,14 @@ func TestExportWorkbookSheets(t *testing.T) {
 
 	// (2) header cells on both data sheets (verbatim contract)
 	assertSheetRow0(t, f, "Murid", []string{
-		"No", "Username", "Nama", "Kelas", "Jurusan", "Status", "Attempts",
-		"Cheating", "Q1 Answer", "Q1 Score", "Q2 Answer", "Q2 Score",
-		"Q3 Answer", "Q3 Score", "Total Score"})
+		"No", "Username", "Nama", "Kelas", "Jurusan", "Status", "Percobaan",
+		"Kecurangan", "Q1 Jawaban", "Q1 Nilai", "Q2 Jawaban", "Q2 Nilai",
+		"Q3 Jawaban", "Q3 Nilai", "Total Nilai",
+	})
 	assertSheetRow0(t, f, "Pertanyaan", []string{
 		"No", "Teks", "Tipe", "Kunci", "Nilai Maks", "Benar", "Salah",
-		"Tidak Dijawab", "% Benar", "% Salah", "% Kosong", "Paling Sering Dipilih"})
+		"Tidak Dijawab", "% Benar", "% Salah", "% Kosong", "Paling Sering Dipilih",
+	})
 
 	// (3) frozen first row on every sheet
 	for _, s := range wantSheets {
@@ -504,7 +507,7 @@ func TestExportCSVQuestionColumns(t *testing.T) {
 	}
 
 	want := append(append([]string{}, exportHeaders...),
-		"Q1 Answer", "Q1 Score", "Q2 Answer", "Q2 Score", "Q3 Answer", "Q3 Score")
+		"Q1 Jawaban", "Q1 Nilai", "Q2 Jawaban", "Q2 Nilai", "Q3 Jawaban", "Q3 Nilai")
 	if len(records[0]) != len(want) {
 		t.Fatalf("header cols = %d, want %d", len(records[0]), len(want))
 	}
@@ -520,7 +523,7 @@ func TestExportCSVQuestionColumns(t *testing.T) {
 
 	// row 2: question text under each Answer column, Score columns blank
 	qrow := records[1]
-	if qrow[0] != "Question text" {
+	if qrow[0] != "Teks pertanyaan" {
 		t.Fatalf("row 2 first cell = %q", qrow[0])
 	}
 	for _, tc := range []struct {

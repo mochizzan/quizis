@@ -16,7 +16,8 @@ import (
 // riwayatQuiz builds an ACTIVE per-question 2-pg quiz with the given
 // review settings; options are Alpha/Bravo/Charlie with Charlie correct.
 func riwayatQuiz(t *testing.T, ts *httptest.Server, pool *sql.DB, ck *http.Cookie,
-	title, review string, showScore, rankingLive bool) (uint64, string) {
+	title, review string, showScore, rankingLive bool,
+) (uint64, string) {
 	t.Helper()
 	form := quizForm(title)
 	form.Set("timer_type", "per_soal")
@@ -103,17 +104,17 @@ func TestHistorySettingsMatrix(t *testing.T) {
 				t.Fatalf("quiz title missing from history: %s", body)
 			}
 			if c.showScore {
-				if !contains(body, "0.00") || !contains(body, `<th class="text-end">Score</th>`) {
+				if !contains(body, "0.00") || !contains(body, `<th class="text-end">Nilai</th>`) {
 					t.Fatalf("score column missing (show_final_score=1)")
 				}
-			} else if contains(body, "0.00") || contains(body, `<th class="text-end">Score</th>`) {
+			} else if contains(body, "0.00") || contains(body, `<th class="text-end">Nilai</th>`) {
 				t.Fatalf("score column shown despite show_final_score=0")
 			}
 			if c.ranking {
-				if !contains(body, `<th class="text-end">Rank</th>`) || !contains(body, "#1") {
+				if !contains(body, `<th class="text-end">Peringkat</th>`) || !contains(body, "#1") {
 					t.Fatalf("rank column missing (ranking_live=1): %s", body)
 				}
-			} else if contains(body, `<th class="text-end">Rank</th>`) || contains(body, "#1") {
+			} else if contains(body, `<th class="text-end">Peringkat</th>`) || contains(body, "#1") {
 				t.Fatalf("rank column shown despite ranking_live=0")
 			}
 
@@ -127,7 +128,7 @@ func TestHistorySettingsMatrix(t *testing.T) {
 				if contains(body, "Bravo") || contains(body, "Charlie") {
 					t.Fatalf("none level leaked question content")
 				}
-				if !contains(body, "Question review is off for this quiz.") {
+				if !contains(body, "Tinjauan pertanyaan tidak aktif untuk kuis ini.") {
 					t.Fatalf("none level missing its empty state")
 				}
 			case "text":
@@ -145,7 +146,7 @@ func TestHistorySettingsMatrix(t *testing.T) {
 			if c.showScore && !contains(body, "0.00") {
 				t.Fatalf("detail score missing (show_final_score=1)")
 			}
-			if !c.showScore && contains(body, `small">Score<`) {
+			if !c.showScore && contains(body, `small">Nilai<`) {
 				t.Fatalf("detail leaked the score header (show_final_score=0)")
 			}
 			if c.ranking && !contains(body, "#1") {
@@ -203,7 +204,7 @@ func TestHistoryOwnership(t *testing.T) {
 	stranger := studentCookie(t, pool, "riwayat-stranger")
 	resp, body := getWith(t, ts.URL+"/history/"+strconv.FormatUint(pid, 10), stranger)
 	assertFail(t, resp, body, http.StatusForbidden, handlers.ErrForbidden,
-		"You are not allowed to view this attempt.")
+		"Anda tidak diizinkan melihat percobaan ini.")
 
 	resp, body = getWith(t, ts.URL+"/history/"+strconv.FormatUint(pid, 10), owner)
 	if resp.StatusCode != http.StatusOK {
@@ -343,7 +344,7 @@ func TestProfileEdit(t *testing.T) {
 	if resp.StatusCode != http.StatusOK || !contains(body, "Riwayat Renamed") {
 		t.Fatalf("profile after edit = %d: %s", resp.StatusCode, body)
 	}
-	if !contains(body, "Profile saved successfully.") {
+	if !contains(body, "Profil berhasil disimpan.") {
 		t.Fatalf("saved confirmation missing: %s", body)
 	}
 	var nama string
@@ -365,10 +366,10 @@ func TestProfileEdit(t *testing.T) {
 	values.Set("kelas_id", "65535")
 	resp, body = postForm(t, ts.URL+"/profile/edit", values, st)
 	assertFail(t, resp, body, http.StatusBadRequest, handlers.ErrValidation,
-		"Invalid class or major.")
+		"Kelas atau jurusan tidak valid.")
 	values.Set("kelas_id", strconv.FormatUint(kelasID, 10))
 	values.Set("nama", "   ")
 	resp, body = postForm(t, ts.URL+"/profile/edit", values, st)
 	assertFail(t, resp, body, http.StatusBadRequest, handlers.ErrValidation,
-		"Full name is required.")
+		"Nama lengkap wajib diisi.")
 }

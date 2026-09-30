@@ -43,7 +43,7 @@ func TestManageStudentAccounts(t *testing.T) {
 		t.Fatalf("students page = %d: %s", resp.StatusCode, body)
 	}
 	for _, want := range []string{
-		"Manage Akun Murid", "soni", "Soni Murid", "soni@example.test",
+		"Kelola akun murid", "soni", "Soni Murid", "soni@example.test",
 		`href="/teacher/students" aria-current="page"`,
 		`data-post="`, `/delete"`, `data-confirm="Hapus akun soni`,
 	} {
@@ -117,8 +117,8 @@ func TestManageStudentAccounts(t *testing.T) {
 		t.Errorf("deactivated live session /me = %q, want anon", body)
 	}
 	resp, body = getWith(t, ts.URL+"/teacher/students", guru)
-	if !strings.Contains(body, "Nonaktif") || !strings.Contains(body, "/activate") {
-		t.Error("deactivated row missing Nonaktif badge or activate action")
+	if !strings.Contains(body, "Tidak aktif") || !strings.Contains(body, "/activate") {
+		t.Error("deactivated row missing \"Tidak aktif\" badge or activate action")
 	}
 
 	// --- reactivate restores login -----------------------------------------

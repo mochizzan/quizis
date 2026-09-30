@@ -46,18 +46,18 @@ type quizRow struct {
 	CreatedAt          time.Time
 }
 
-// quizChip maps status → (English label, badge classes). Monochrome + the
+// quizChip maps status → (Indonesian label, badge classes). Monochrome + the
 // two accents only (spec §11.20): "bg-ok" is #067647, the rest are grays.
 func quizChip(status string) (label, class string) {
 	switch status {
 	case "nonaktif":
-		return "Not active", "badge text-bg-secondary"
+		return "Tidak aktif", "badge text-bg-secondary"
 	case "aktif":
-		return "Active", "badge bg-ok"
+		return "Aktif", "badge bg-ok"
 	case "berjalan":
-		return "Running", "badge text-bg-dark"
+		return "Berjalan", "badge text-bg-dark"
 	case "selesai":
-		return "Finished", "badge border text-secondary"
+		return "Selesai", "badge border text-secondary"
 	}
 	return status, "badge text-bg-secondary"
 }
@@ -81,15 +81,15 @@ type participantRow struct {
 func participantStatusLabel(s string) string {
 	switch s {
 	case "pending":
-		return "Awaiting approval"
+		return "Menunggu persetujuan"
 	case "registered":
-		return "Ready"
+		return "Terdaftar"
 	case "started":
-		return "In progress"
+		return "Berlangsung"
 	case "selesai":
-		return "Finished"
+		return "Selesai"
 	case "dikeluarkan":
-		return "Removed"
+		return "Dikeluarkan"
 	}
 	return s
 }
@@ -131,10 +131,10 @@ func parseQuizSettings(c *echo.Context) (quizSettings, string) {
 	var s quizSettings
 	s.Judul = strings.TrimSpace(c.FormValue("judul"))
 	if s.Judul == "" {
-		return s, "Title is required."
+		return s, "Judul wajib diisi."
 	}
 	if len([]rune(s.Judul)) > 150 {
-		return s, "Title is too long (max 150 characters)."
+		return s, "Judul terlalu panjang (maksimal 150 karakter)."
 	}
 	s.Deskripsi = strings.TrimSpace(c.FormValue("deskripsi"))
 
@@ -142,17 +142,17 @@ func parseQuizSettings(c *echo.Context) (quizSettings, string) {
 	switch s.TimerType {
 	case "global", "per_soal", "tanpa_timer":
 	default:
-		return s, "Invalid timer type."
+		return s, "Jenis timer tidak valid."
 	}
 	s.JoinMode = c.FormValue("join_mode")
 	if s.JoinMode != "open" && s.JoinMode != "approve" {
-		return s, "Invalid join mode."
+		return s, "Mode bergabung tidak valid."
 	}
 	s.QuestionReview = c.FormValue("question_review")
 	switch s.QuestionReview {
 	case "none", "text", "full":
 	default:
-		return s, "Invalid review setting."
+		return s, "Pengaturan tinjauan tidak valid."
 	}
 
 	// timer_on derives from timer_type: the form no longer sends it, so a
@@ -171,20 +171,20 @@ func parseQuizSettings(c *echo.Context) (quizSettings, string) {
 	} else {
 		v, ok := formUint(c, "total_seconds", 32)
 		if !ok {
-			return s, "Total seconds must be a number."
+			return s, "Total detik harus berupa angka."
 		}
 		s.TotalSeconds = uint32(v)
 		if v, ok = formUint(c, "per_question_seconds", 16); !ok {
-			return s, "Seconds per question must be a number."
+			return s, "Detik per pertanyaan harus berupa angka."
 		}
 		s.PerQuestionSeconds = uint16(v)
 	}
 	v, ok := formUint(c, "max_attempts", 8)
 	if !ok {
-		return s, "Attempts must be a number."
+		return s, "Jumlah percobaan harus berupa angka."
 	}
 	if v < 1 {
-		return s, "Attempts must be at least 1."
+		return s, "Jumlah percobaan setidaknya 1."
 	}
 	s.MaxAttempts = uint8(v)
 
@@ -196,10 +196,10 @@ func parseQuizSettings(c *echo.Context) (quizSettings, string) {
 	// would trip the timeout watcher immediately); tanpa_timer carries no
 	// timer seconds, so neither check applies to it
 	if s.TimerType == "global" && s.TotalSeconds < 1 {
-		return s, "Set the total time in seconds."
+		return s, "Isi total waktu dalam detik."
 	}
 	if s.TimerType == "per_soal" && s.PerQuestionSeconds < 1 {
-		return s, "Set the seconds per question."
+		return s, "Isi detik per pertanyaan."
 	}
 	return s, ""
 }
@@ -237,9 +237,9 @@ func (t *Teacher) QuizListPage(c *echo.Context) error {
 	page := listPage(c)
 	rows, page, _ := paginate(filtered, page)
 	tb := newTable(c, q, len(filtered), page)
-	tb.Placeholder = "Search title or code…"
+	tb.Placeholder = "Cari judul atau kode…"
 	return c.Render(http.StatusOK, "page-teacher-quiz-list", map[string]any{
-		"Title": "Quizzes", "Quizzes": rows, "Table": tb, "Status": status,
+		"Title": "Kuis", "Quizzes": rows, "Table": tb, "Status": status,
 	})
 }
 
@@ -262,7 +262,7 @@ func (t *Teacher) QuizNewPage(c *echo.Context) error {
 	}
 	withChip(&q)
 	return c.Render(http.StatusOK, "page-teacher-quiz-new", map[string]any{
-		"Title": "New quiz", "Quiz": q,
+		"Title": "Kuis baru", "Quiz": q,
 	})
 }
 
@@ -288,7 +288,7 @@ func (t *Teacher) CreateQuiz(c *echo.Context) error {
 		code, err := codeGen()
 		if err != nil {
 			tx.Rollback()
-			return fail(c, http.StatusInternalServerError, ErrServer, "Could not create the quiz.")
+			return fail(c, http.StatusInternalServerError, ErrServer, "Tidak dapat membuat kuis.")
 		}
 		res, err := tx.ExecContext(ctx,
 			`INSERT INTO quizzes (code, judul, deskripsi, timer_type, timer_on, status,
@@ -314,7 +314,7 @@ func (t *Teacher) CreateQuiz(c *echo.Context) error {
 	if !created {
 		tx.Rollback()
 		return fail(c, http.StatusInternalServerError, ErrServer,
-			"Could not allocate a join code — please try again.")
+			"Tidak dapat membuat kode gabung — silakan coba lagi.")
 	}
 	if err := tx.Commit(); err != nil {
 		return err
@@ -349,13 +349,13 @@ func requestScheme(r *http.Request) string {
 func (t *Teacher) QuizDetailPage(c *echo.Context) error {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		return c.String(http.StatusNotFound, "Not found")
+		return c.String(http.StatusNotFound, "Tidak ditemukan.")
 	}
 	ctx := c.Request().Context()
 	q, err := t.quizByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return c.String(http.StatusNotFound, "Not found")
+			return c.String(http.StatusNotFound, "Tidak ditemukan.")
 		}
 		return err
 	}
@@ -367,7 +367,7 @@ func (t *Teacher) QuizDetailPage(c *echo.Context) error {
 	bank, err := t.listBank(ctx, length)
 	if err != nil {
 		if errors.Is(err, errInvalidLength) {
-			return c.String(http.StatusBadRequest, "Invalid length filter")
+			return c.String(http.StatusBadRequest, "Filter panjang tidak valid.")
 		}
 		return err
 	}
@@ -419,7 +419,7 @@ func (t *Teacher) QuizDetailPage(c *echo.Context) error {
 	page := listPage(c)
 	rows, page, _ := paginate(filtered, page)
 	tb := newTable(c, search, len(filtered), page)
-	tb.Placeholder = "Search participants…"
+	tb.Placeholder = "Cari peserta…"
 	return c.Render(http.StatusOK, "page-teacher-quiz-detail", map[string]any{
 		"Title": q.Judul, "Quiz": q, "Questions": questions, "Bank": bankFiltered,
 		// BankEmpty reports the UNFILTERED bank size so the template can
@@ -518,7 +518,7 @@ func (t *Teacher) roster(ctx context.Context, quizID uint64) ([]participantRow, 
 func (t *Teacher) EditQuiz(c *echo.Context) error {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid quiz id.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "ID kuis tidak valid.")
 	}
 	s, errMsg := parseQuizSettings(c)
 	if errMsg != "" {
@@ -544,7 +544,7 @@ func (t *Teacher) EditQuiz(c *echo.Context) error {
 		var status string
 		err := t.DB.QueryRowContext(ctx, `SELECT status FROM quizzes WHERE id = ?`, id).Scan(&status)
 		if errors.Is(err, sql.ErrNoRows) {
-			return fail(c, http.StatusNotFound, ErrNotFound, "Quiz not found.")
+			return fail(c, http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan.")
 		}
 		if err != nil {
 			return err
@@ -571,7 +571,7 @@ func (t *Teacher) EditQuiz(c *echo.Context) error {
 // lockedConflict is the exact spec message for the edit guard.
 func lockedConflict(c *echo.Context) error {
 	return fail(c, http.StatusConflict, ErrConflict,
-		"Quiz has participants or is active — editing is locked.")
+		"Kuis memiliki peserta atau sedang aktif — pengubahan dikunci.")
 }
 
 // --- POST /teacher/quiz/:id/questions (compose) ----------------------------
@@ -596,7 +596,7 @@ func composeForm(c *echo.Context) (url.Values, string) {
 			Length      string `json:"length"`
 		}
 		if err := dec.Decode(&payload); err != nil {
-			return nil, "Invalid request body."
+			return nil, "Badan permintaan tidak valid."
 		}
 		form := url.Values{"length": {payload.Length}}
 		for _, v := range payload.QuestionIDs {
@@ -608,12 +608,12 @@ func composeForm(c *echo.Context) (url.Values, string) {
 		return form, ""
 	case strings.HasPrefix(ct, "multipart/form-data"):
 		if err := c.Request().ParseMultipartForm(32 << 20); err != nil {
-			return nil, "Invalid form body."
+			return nil, "Badan formulir tidak valid."
 		}
 		return c.Request().Form, ""
 	default:
 		if err := c.Request().ParseForm(); err != nil {
-			return nil, "Invalid form body."
+			return nil, "Badan formulir tidak valid."
 		}
 		return c.Request().Form, ""
 	}
@@ -630,7 +630,7 @@ func composeForm(c *echo.Context) (url.Values, string) {
 func (t *Teacher) ComposeQuestions(c *echo.Context) error {
 	quizID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil || quizID == 0 {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid quiz id.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "ID kuis tidak valid.")
 	}
 	ctx := c.Request().Context()
 	// missing quiz → 404 before anything is parsed or inserted (no FKs)
@@ -640,7 +640,7 @@ func (t *Teacher) ComposeQuestions(c *echo.Context) error {
 		return err
 	}
 	if !exists {
-		return fail(c, http.StatusNotFound, ErrNotFound, "Quiz not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan.")
 	}
 	form, errMsg := composeForm(c)
 	if errMsg != "" {
@@ -648,11 +648,11 @@ func (t *Teacher) ComposeQuestions(c *echo.Context) error {
 	}
 	rawIDs := form["question_ids[]"]
 	if len(rawIDs) == 0 {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Choose at least one question.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Pilih setidaknya satu pertanyaan.")
 	}
 	bucket, werr := bucketFor(form.Get("length"))
 	if werr != nil {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid length filter.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Filter panjang tidak valid.")
 	}
 
 	ids := make([]uint64, 0, len(rawIDs))
@@ -662,10 +662,10 @@ func (t *Teacher) ComposeQuestions(c *echo.Context) error {
 	for _, raw := range rawIDs {
 		qid, err := strconv.ParseUint(raw, 10, 64)
 		if err != nil || qid == 0 {
-			return fail(c, http.StatusBadRequest, ErrValidation, "Invalid question id.")
+			return fail(c, http.StatusBadRequest, ErrValidation, "ID pertanyaan tidak valid.")
 		}
 		if seen[qid] {
-			return fail(c, http.StatusConflict, ErrConflict, "Question already in this quiz.")
+			return fail(c, http.StatusConflict, ErrConflict, "Pertanyaan sudah ada di kuis ini.")
 		}
 		seen[qid] = true
 		ids = append(ids, qid)
@@ -678,7 +678,7 @@ func (t *Teacher) ComposeQuestions(c *echo.Context) error {
 		}
 		seq, err := strconv.ParseUint(rawSeq, 10, 16)
 		if err != nil {
-			return fail(c, http.StatusBadRequest, ErrValidation, "Every question needs an order number.")
+			return fail(c, http.StatusBadRequest, ErrValidation, "Setiap pertanyaan memerlukan nomor urut.")
 		}
 		seqs = append(seqs, uint16(seq))
 		hasSeq = append(hasSeq, true)
@@ -714,11 +714,11 @@ func (t *Teacher) ComposeQuestions(c *echo.Context) error {
 	for _, id := range ids {
 		ln, ok := found[id]
 		if !ok {
-			return fail(c, http.StatusBadRequest, ErrValidation, "One or more questions no longer exist.")
+			return fail(c, http.StatusBadRequest, ErrValidation, "Satu atau beberapa pertanyaan sudah tidak ada.")
 		}
 		if !bucket.includes(ln) {
 			return fail(c, http.StatusBadRequest, ErrValidation,
-				"A selected question is outside the chosen length filter.")
+				"Pertanyaan terpilih berada di luar filter panjang yang dipilih.")
 		}
 	}
 
@@ -756,7 +756,7 @@ func (t *Teacher) ComposeQuestions(c *echo.Context) error {
 			quizID, id, seqs[i]); err != nil {
 			if isDuplicateKey(err) {
 				tx.Rollback()
-				return fail(c, http.StatusConflict, ErrConflict, "Question already in this quiz.")
+				return fail(c, http.StatusConflict, ErrConflict, "Pertanyaan sudah ada di kuis ini.")
 			}
 			tx.Rollback()
 			return err
@@ -780,11 +780,11 @@ func (t *Teacher) ComposeQuestions(c *echo.Context) error {
 func (t *Teacher) RemoveQuestion(c *echo.Context) error {
 	quizID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil || quizID == 0 {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid quiz id.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "ID kuis tidak valid.")
 	}
 	qid, err := strconv.ParseUint(c.Param("qid"), 10, 64)
 	if err != nil || qid == 0 {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid question id.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "ID pertanyaan tidak valid.")
 	}
 	ctx := c.Request().Context()
 	res, err := t.DB.ExecContext(ctx,
@@ -799,7 +799,7 @@ func (t *Teacher) RemoveQuestion(c *echo.Context) error {
 		var status string
 		err := t.DB.QueryRowContext(ctx, `SELECT status FROM quizzes WHERE id = ?`, quizID).Scan(&status)
 		if errors.Is(err, sql.ErrNoRows) {
-			return fail(c, http.StatusNotFound, ErrNotFound, "Quiz not found.")
+			return fail(c, http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan.")
 		}
 		if err != nil {
 			return err
@@ -807,7 +807,7 @@ func (t *Teacher) RemoveQuestion(c *echo.Context) error {
 		if status != "nonaktif" {
 			return lockedConflict(c)
 		}
-		return fail(c, http.StatusNotFound, ErrNotFound, "Question is not in this quiz.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Pertanyaan tidak ada di kuis ini.")
 	}
 	t.Store.Delete(cache.QuizSetKey(quizID))
 	t.Store.Delete(cache.QuizStateKey(quizID))
@@ -832,7 +832,7 @@ func (t *Teacher) RemoveQuestion(c *echo.Context) error {
 func (t *Teacher) ReorderQuestions(c *echo.Context) error {
 	quizID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil || quizID == 0 {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid quiz id.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "ID kuis tidak valid.")
 	}
 	form, errMsg := composeForm(c)
 	if errMsg != "" {
@@ -840,18 +840,18 @@ func (t *Teacher) ReorderQuestions(c *echo.Context) error {
 	}
 	rawIDs := form["question_ids[]"]
 	if len(rawIDs) == 0 {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Choose at least one question.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Pilih setidaknya satu pertanyaan.")
 	}
 	ids := make([]uint64, 0, len(rawIDs))
 	seen := make(map[uint64]bool, len(rawIDs))
 	for _, raw := range rawIDs {
 		qid, err := strconv.ParseUint(raw, 10, 64)
 		if err != nil || qid == 0 {
-			return fail(c, http.StatusBadRequest, ErrValidation, "Invalid question id.")
+			return fail(c, http.StatusBadRequest, ErrValidation, "ID pertanyaan tidak valid.")
 		}
 		if seen[qid] {
 			return fail(c, http.StatusBadRequest, ErrValidation,
-				"Duplicate question in the order.")
+				"Pertanyaan ganda dalam urutan.")
 		}
 		seen[qid] = true
 		ids = append(ids, qid)
@@ -869,7 +869,7 @@ func (t *Teacher) ReorderQuestions(c *echo.Context) error {
 		`SELECT status FROM quizzes WHERE id = ? FOR UPDATE`, quizID).Scan(&status); err != nil {
 		tx.Rollback()
 		if errors.Is(err, sql.ErrNoRows) {
-			return fail(c, http.StatusNotFound, ErrNotFound, "Quiz not found.")
+			return fail(c, http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan.")
 		}
 		return err
 	}
@@ -915,7 +915,7 @@ func (t *Teacher) ReorderQuestions(c *echo.Context) error {
 	if mismatch {
 		tx.Rollback()
 		return fail(c, http.StatusBadRequest, ErrValidation,
-			"Question order does not match this quiz.")
+			"Urutan pertanyaan tidak cocok dengan kuis ini.")
 	}
 
 	// renumber 1..N: idx_qq_order is a plain (non-unique) index, so the
@@ -942,13 +942,13 @@ func (t *Teacher) ReorderQuestions(c *echo.Context) error {
 func (t *Teacher) QuizQR(c *echo.Context) error {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		return fail(c, http.StatusNotFound, ErrNotFound, "Quiz not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan.")
 	}
 	var code string
 	if err := t.DB.QueryRowContext(c.Request().Context(),
 		`SELECT code FROM quizzes WHERE id = ?`, id).Scan(&code); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return fail(c, http.StatusNotFound, ErrNotFound, "Quiz not found.")
+			return fail(c, http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan.")
 		}
 		return err
 	}
@@ -967,17 +967,17 @@ func (t *Teacher) QuizQR(c *echo.Context) error {
 func (t *Teacher) AddParticipant(c *echo.Context) error {
 	quizID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid quiz id.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "ID kuis tidak valid.")
 	}
 	var payload struct {
 		Username string `json:"username"`
 	}
 	if err := c.Bind(&payload); err != nil {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid request body.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Badan permintaan tidak valid.")
 	}
 	username := strings.TrimSpace(payload.Username)
 	if username == "" {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Username is required.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Username wajib diisi.")
 	}
 	ctx := c.Request().Context()
 	tx, err := t.DB.BeginTx(ctx, nil)
@@ -989,7 +989,7 @@ func (t *Teacher) AddParticipant(c *echo.Context) error {
 		`SELECT join_mode FROM quizzes WHERE id = ?`, quizID).Scan(&joinMode); err != nil {
 		tx.Rollback()
 		if errors.Is(err, sql.ErrNoRows) {
-			return fail(c, http.StatusNotFound, ErrNotFound, "Quiz not found.")
+			return fail(c, http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan.")
 		}
 		return err
 	}
@@ -998,7 +998,7 @@ func (t *Teacher) AddParticipant(c *echo.Context) error {
 		`SELECT id FROM users WHERE username = ?`, username).Scan(&userID); err != nil {
 		tx.Rollback()
 		if errors.Is(err, sql.ErrNoRows) {
-			return fail(c, http.StatusNotFound, ErrNotFound, "Student not found.")
+			return fail(c, http.StatusNotFound, ErrNotFound, "Murid tidak ditemukan.")
 		}
 		return err
 	}
@@ -1011,7 +1011,7 @@ func (t *Teacher) AddParticipant(c *echo.Context) error {
 	}
 	if exists {
 		tx.Rollback()
-		return fail(c, http.StatusConflict, ErrConflict, "Already a participant.")
+		return fail(c, http.StatusConflict, ErrConflict, "Sudah menjadi peserta.")
 	}
 	status := "registered"
 	if joinMode == "approve" {
@@ -1051,7 +1051,7 @@ func activateQuiz(c *echo.Context, db *sql.DB, store *cache.Store, id uint64, wa
 			return err
 		}
 		if !exists {
-			return fail(c, http.StatusNotFound, ErrNotFound, "Quiz not found.")
+			return fail(c, http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan.")
 		}
 		return ok(c, nil)
 	}
@@ -1066,7 +1066,7 @@ func activateQuiz(c *echo.Context, db *sql.DB, store *cache.Store, id uint64, wa
 		}
 		if n == 0 {
 			tx.Rollback()
-			return fail(c, http.StatusBadRequest, ErrValidation, "Add at least one question.")
+			return fail(c, http.StatusBadRequest, ErrValidation, "Tambahkan setidaknya satu pertanyaan.")
 		}
 		var status string
 		var shuffleQ, shuffleO, timerOn bool
@@ -1077,7 +1077,7 @@ func activateQuiz(c *echo.Context, db *sql.DB, store *cache.Store, id uint64, wa
 			Scan(&status, &shuffleQ, &shuffleO, &timerOn, &total)
 		if errors.Is(err, sql.ErrNoRows) {
 			tx.Rollback()
-			return fail(c, http.StatusNotFound, ErrNotFound, "Quiz not found.")
+			return fail(c, http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan.")
 		}
 		if err != nil {
 			tx.Rollback()
@@ -1090,7 +1090,7 @@ func activateQuiz(c *echo.Context, db *sql.DB, store *cache.Store, id uint64, wa
 			return classifyNoop()
 		case "selesai":
 			tx.Rollback()
-			return fail(c, http.StatusConflict, ErrConflict, "Quiz has ended.")
+			return fail(c, http.StatusConflict, ErrConflict, "Kuis sudah berakhir.")
 		}
 		// server-side forces at activation (spec §6.7 / §9)
 		if !shuffleQ {
@@ -1125,7 +1125,7 @@ func activateQuiz(c *echo.Context, db *sql.DB, store *cache.Store, id uint64, wa
 			 FROM quizzes WHERE id = ? FOR UPDATE`, id).Scan(&status, &parts)
 		if errors.Is(err, sql.ErrNoRows) {
 			tx.Rollback()
-			return fail(c, http.StatusNotFound, ErrNotFound, "Quiz not found.")
+			return fail(c, http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan.")
 		}
 		if err != nil {
 			tx.Rollback()
@@ -1136,15 +1136,15 @@ func activateQuiz(c *echo.Context, db *sql.DB, store *cache.Store, id uint64, wa
 			return classifyNoop() // already there — idempotent success
 		case "berjalan":
 			tx.Rollback()
-			return fail(c, http.StatusConflict, ErrConflict, "Stop the quiz before deactivating.")
+			return fail(c, http.StatusConflict, ErrConflict, "Hentikan kuis sebelum menonaktifkan.")
 		case "selesai":
 			tx.Rollback()
-			return fail(c, http.StatusConflict, ErrConflict, "Quiz has ended.")
+			return fail(c, http.StatusConflict, ErrConflict, "Kuis sudah berakhir.")
 		}
 		if parts {
 			tx.Rollback()
 			return fail(c, http.StatusConflict, ErrConflict,
-				"Quiz has participants — deactivation is locked.")
+				"Kuis memiliki peserta — penonaktifan dikunci.")
 		}
 		if _, err := tx.ExecContext(ctx,
 			`UPDATE quizzes SET status = 'nonaktif' WHERE id = ? AND status = 'aktif'`, id); err != nil {
@@ -1161,7 +1161,7 @@ func activateQuiz(c *echo.Context, db *sql.DB, store *cache.Store, id uint64, wa
 
 	default:
 		tx.Rollback()
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid status.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Status tidak valid.")
 	}
 }
 
@@ -1172,7 +1172,7 @@ func activateQuiz(c *echo.Context, db *sql.DB, store *cache.Store, id uint64, wa
 func (t *Teacher) DeleteQuiz(c *echo.Context) error {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Invalid quiz id.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "ID kuis tidak valid.")
 	}
 	ctx := c.Request().Context()
 	tx, err := t.DB.BeginTx(ctx, nil)
@@ -1194,10 +1194,10 @@ func (t *Teacher) DeleteQuiz(c *echo.Context) error {
 			return err
 		}
 		if !exists {
-			return fail(c, http.StatusNotFound, ErrNotFound, "Quiz not found.")
+			return fail(c, http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan.")
 		}
 		return fail(c, http.StatusConflict, ErrConflict,
-			"Quiz has participants — deleting is locked.")
+			"Kuis memiliki peserta — penghapusan dikunci.")
 	}
 	if _, err := tx.ExecContext(ctx,
 		`DELETE FROM quiz_questions WHERE quiz_id = ?`, id); err != nil {

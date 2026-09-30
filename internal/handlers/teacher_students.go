@@ -64,9 +64,9 @@ func (t *Teacher) StudentsPage(c *echo.Context) error {
 	page := listPage(c)
 	out, page, _ := paginate(filtered, page)
 	tb := newTable(c, q, len(filtered), page)
-	tb.Placeholder = "Search username, email, or name…"
+	tb.Placeholder = "Cari username, email, atau nama…"
 	return c.Render(http.StatusOK, "page-teacher-students", map[string]any{
-		"Title": "Manage Akun Murid", "Rows": out,
+		"Title": "Kelola akun murid", "Rows": out,
 		"Table": tb, "Status": status,
 	})
 }
@@ -102,7 +102,7 @@ func (t *Teacher) studentList(ctx context.Context) ([]studentRow, error) {
 func studentID(c *echo.Context) (uint64, *respError) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		return 0, errResp(http.StatusBadRequest, ErrValidation, "Invalid id.")
+		return 0, errResp(http.StatusBadRequest, ErrValidation, "ID tidak valid.")
 	}
 	return id, nil
 }
@@ -126,7 +126,7 @@ func userExists(ctx context.Context, db *sql.DB, id uint64) (bool, error) {
 func (t *Teacher) StudentEditPage(c *echo.Context) error {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		return fail(c, http.StatusNotFound, ErrNotFound, "Student not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Murid tidak ditemukan.")
 	}
 	ctx := c.Request().Context()
 	var u studentRow
@@ -135,7 +135,7 @@ func (t *Teacher) StudentEditPage(c *echo.Context) error {
 		 FROM users WHERE id = ?`, id).
 		Scan(&u.ID, &u.Username, &u.Email, &u.Nama, &u.KelasID, &u.JurusanID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return fail(c, http.StatusNotFound, ErrNotFound, "Student not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Murid tidak ditemukan.")
 	}
 	if err != nil {
 		return err
@@ -149,13 +149,13 @@ func (t *Teacher) StudentEditPage(c *echo.Context) error {
 		return err
 	}
 	return c.Render(http.StatusOK, "page-teacher-student-edit", map[string]any{
-		"Title": "Edit akun murid", "U": u,
+		"Title": "Ubah akun murid", "U": u,
 		"Kelas": kelas, "Jurusan": jurusan,
 		"Crumbs": []Crumb{
-			{Label: "Dashboard"},
+			{Label: "Dasbor"},
 			{Label: "Guru", URL: "/teacher"},
-			{Label: "Manage Akun Murid", URL: "/teacher/students"},
-			{Label: "Edit"},
+			{Label: "Kelola akun murid", URL: "/teacher/students"},
+			{Label: "Ubah"},
 		},
 	})
 }
@@ -176,21 +176,21 @@ func (t *Teacher) EditStudent(c *echo.Context) error {
 
 	switch {
 	case username == "" || nama == "" || email == "" || kelasStr == "" || jurusanStr == "":
-		return fail(c, http.StatusBadRequest, ErrValidation, "Please fill in all fields.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Silakan isi semua kolom.")
 	case len([]rune(username)) > 50:
 		return fail(c, http.StatusBadRequest, ErrValidation,
-			"Username is too long (max 50 characters).")
+			"Username terlalu panjang (maksimal 50 karakter).")
 	case len([]rune(nama)) > 100:
 		return fail(c, http.StatusBadRequest, ErrValidation,
-			"Full name is too long (max 100 characters).")
+			"Nama lengkap terlalu panjang (maksimal 100 karakter).")
 	case len([]rune(email)) > 100:
 		return fail(c, http.StatusBadRequest, ErrValidation,
-			"Email is too long (max 100 characters).")
+			"Email terlalu panjang (maksimal 100 karakter).")
 	}
 	kelasID, err1 := strconv.ParseUint(kelasStr, 10, 16)
 	jurusanID, err2 := strconv.ParseUint(jurusanStr, 10, 16)
 	if err1 != nil || err2 != nil {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Unknown class or major.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Kelas atau jurusan tidak dikenal.")
 	}
 	// no FKs → both refs must exist before the row can point at them
 	for _, ref := range []struct {
@@ -204,7 +204,7 @@ func (t *Teacher) EditStudent(c *echo.Context) error {
 			return err
 		}
 		if !exists {
-			return fail(c, http.StatusBadRequest, ErrValidation, "Unknown class or major.")
+			return fail(c, http.StatusBadRequest, ErrValidation, "Kelas atau jurusan tidak dikenal.")
 		}
 	}
 	exists, err := userExists(ctx, t.DB, id)
@@ -212,7 +212,7 @@ func (t *Teacher) EditStudent(c *echo.Context) error {
 		return err
 	}
 	if !exists {
-		return fail(c, http.StatusNotFound, ErrNotFound, "Student not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Murid tidak ditemukan.")
 	}
 	if _, err := t.DB.ExecContext(ctx, `UPDATE users
 		SET username = ?, email = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?
@@ -247,7 +247,7 @@ func (t *Teacher) setStudentActive(c *echo.Context, active bool) error {
 		return err
 	}
 	if !exists {
-		return fail(c, http.StatusNotFound, ErrNotFound, "Student not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Murid tidak ditemukan.")
 	}
 	if _, err := t.DB.ExecContext(ctx,
 		`UPDATE users SET aktif = ? WHERE id = ?`, active, id); err != nil {
@@ -278,7 +278,7 @@ func (t *Teacher) DeleteStudent(c *echo.Context) error {
 		return err
 	}
 	if !exists {
-		return fail(c, http.StatusNotFound, ErrNotFound, "Student not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Murid tidak ditemukan.")
 	}
 
 	// the quizzes whose state mirrors mention this student — invalidate

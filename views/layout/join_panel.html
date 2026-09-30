@@ -11,14 +11,14 @@
   <div class="{{if .ShowActive}}col-lg-5{{else}}col-xl-6 mx-auto{{end}}">
     <div class="card">
       <div class="card-body">
-        {{if .ShowActive}}<h2 class="h5 mb-3">Join with a code</h2>{{else}}<h1 class="h5 mb-3">Join with a code</h1>{{end}}
+        {{if .ShowActive}}<h2 class="h5 mb-3">Gabung dengan kode</h2>{{else}}<h1 class="h5 mb-3">Gabung dengan kode</h1>{{end}}
         <form id="join-form" class="row g-2 align-items-end" novalidate{{if eq .Role "murid"}} data-authed="1"{{end}}>
           <div class="col-sm-8">
-            <label class="form-label" for="code">Join code</label>
+            <label class="form-label" for="code">Kode gabung</label>
             <input class="form-control text-uppercase" id="code" name="code" maxlength="6" placeholder="ABC123" autocomplete="off" required>
           </div>
           <div class="col-sm-4">
-            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-door-open me-1" aria-hidden="true"></i>Join quiz</button>
+            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-door-open me-1" aria-hidden="true"></i>Gabung kuis</button>
           </div>
         </form>
       </div>
@@ -28,7 +28,7 @@
   <div class="col-lg-7">
     <div class="card">
       <div class="card-body">
-        <h2 class="h5 mb-3"><i class="bi bi-broadcast me-2" aria-hidden="true"></i>Active quizzes</h2>
+        <h2 class="h5 mb-3"><i class="bi bi-broadcast me-2" aria-hidden="true"></i>Kuis aktif</h2>
         <ul class="list-group list-group-flush">
           {{range .Quizzes}}
           <li class="list-group-item d-flex justify-content-between align-items-center">
@@ -39,7 +39,7 @@
             </span>
           </li>
           {{else}}
-          <li class="list-group-item text-body-secondary">No quizzes are open right now. Ask your teacher for a join code.</li>
+          <li class="list-group-item text-body-secondary">Belum ada kuis yang dibuka saat ini. Minta kode gabung kepada guru Anda.</li>
           {{end}}
         </ul>
       </div>
@@ -62,11 +62,11 @@
       body: JSON.stringify({ code: code })
     }).then(function (res) { return res.json(); }).then(function (body) {
       if (body.ok) { location.href = body.data.redirect; return; }
-      if (window.quizToast) quizToast("danger", body.message || "Could not join that quiz.");
-      else console.error(body.message || "Could not join that quiz.");
+      if (window.quizToast) quizToast("danger", body.message || "Tidak dapat bergabung ke kuis tersebut.");
+      else console.error(body.message || "Tidak dapat bergabung ke kuis tersebut.");
     }).catch(function () {
-      if (window.quizToast) quizToast("danger", "Could not join that quiz.");
-      else console.error("Could not join that quiz.");
+      if (window.quizToast) quizToast("danger", "Tidak dapat bergabung ke kuis tersebut.");
+      else console.error("Tidak dapat bergabung ke kuis tersebut.");
     });
   }
 
@@ -81,7 +81,7 @@
     e.preventDefault();
     var code = (input.value || "").trim().toUpperCase();
     if (code.length !== 6) {
-      if (window.quizToast) quizToast("danger", "Enter the 6-character join code.");
+      if (window.quizToast) quizToast("danger", "Masukkan kode gabung 6 karakter.");
       input.focus();
       return;
     }

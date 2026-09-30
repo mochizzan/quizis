@@ -78,7 +78,7 @@ func (t *Teacher) InitiateUpload(c *echo.Context) error {
 	}
 	sess := mw.SessionFrom(c)
 	if sess == nil {
-		return fail(c, http.StatusUnauthorized, ErrUnauthenticated, "Sign in to upload an image.")
+		return fail(c, http.StatusUnauthorized, ErrUnauthenticated, "Masuk untuk mengunggah gambar.")
 	}
 	// sweep first (spec): best-effort — a failure is logged and never
 	// blocks a new session

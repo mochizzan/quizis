@@ -25,11 +25,11 @@ func (l *Landing) Home(c *echo.Context) error {
 // JoinPage renders the public join page: the join-code form only.
 func (l *Landing) JoinPage(c *echo.Context) error {
 	return c.Render(http.StatusOK, "page-join", map[string]any{
-		"Title": "Join quiz",
+		"Title": "Gabung kuis",
 	})
 }
 
 // About renders the static About page (feature overview, both roles).
 func (l *Landing) About(c *echo.Context) error {
-	return c.Render(http.StatusOK, "page-about", map[string]any{"Title": "About"})
+	return c.Render(http.StatusOK, "page-about", map[string]any{"Title": "Tentang"})
 }

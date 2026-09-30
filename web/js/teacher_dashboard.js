@@ -98,7 +98,7 @@
   // (their lists ship {id,nama}); status ships {value,label} including one.
   function filterOptions(payload) {
     var f = (payload && payload.filters) || {};
-    var all = [{ value: "", label: "All" }];
+    var all = [{ value: "", label: "Semua" }];
     function idOpts(rows) {
       return list(rows).map(function (o) {
         return { value: str(o && o.id), label: str(o && o.nama) };
@@ -170,7 +170,7 @@
       try { initial = JSON.parse(blob.textContent); } catch (e) { initial = null; }
     }
     if (!initial || typeof initial !== "object") {
-      showError("Dashboard data could not be loaded. Refresh the page to try again.");
+      showError("Data dasbor tidak dapat dimuat. Muat ulang halaman untuk mencoba lagi.");
       return;
     }
 
@@ -248,7 +248,7 @@
           type: "bar",
           data: {
             labels: data.kelas.labels,
-            datasets: [{ label: "Students", data: data.kelas.values,
+            datasets: [{ label: "Murid", data: data.kelas.values,
                          backgroundColor: pal[0], borderRadius: 6 }]
           },
           options: { responsive: common.responsive, maintainAspectRatio: common.maintainAspectRatio,
@@ -269,7 +269,7 @@
           type: "bar",
           data: {
             labels: data.nilai.labels,
-            datasets: [{ label: "Attempts", data: data.nilai.values,
+            datasets: [{ label: "Percobaan", data: data.nilai.values,
                          backgroundColor: pal[1], borderRadius: 6 }]
           },
           options: { responsive: common.responsive, maintainAspectRatio: common.maintainAspectRatio,
@@ -349,7 +349,7 @@
       body.textContent = "";
       if (!rows.length) {
         var empty = document.createElement("tr");
-        var td = cell("No quizzes match the current filters.", "text-body-secondary");
+        var td = cell("Tidak ada kuis yang cocok dengan filter saat ini.", "text-body-secondary");
         td.colSpan = 4;
         empty.appendChild(td);
         body.appendChild(empty);
@@ -443,7 +443,7 @@
         .then(function (r) {
           if (r.status >= 400 || !r.body || r.body.ok !== true || !r.body.data) {
             throw new Error((r.body && r.body.message) ||
-              "Request failed (" + r.status + "). Please try again.");
+              "Permintaan gagal (" + r.status + "). Silakan coba lagi.");
           }
           if (seq !== state.seq) return; // a newer filter change superseded us
           hideError();
@@ -451,7 +451,7 @@
         })
         .catch(function (err) {
           if (seq !== state.seq) return;
-          notifyError((err && err.message) || "Dashboard data could not be refreshed.");
+          notifyError((err && err.message) || "Data dasbor tidak dapat disegarkan.");
         })
         .then(function () { // finally — ES5-safe
           if (seq === state.seq) setBusy(false);

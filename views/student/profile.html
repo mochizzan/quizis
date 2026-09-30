@@ -1,8 +1,8 @@
 {{define "page-student-profile"}}
 {{template "app_head" .}}
   <header class="mb-4">
-    <p class="text-body-secondary small mb-1">Account</p>
-    <h1 class="h3 mb-0">Profile</h1>
+    <p class="text-body-secondary small mb-1">Akun</p>
+    <h1 class="h3 mb-0">Profil</h1>
   </header>
 
 
@@ -10,12 +10,12 @@
     <div class="col-12 col-md-6">
       <form method="post" action="/profile/edit" class="card card-body vstack gap-3">
         <div>
-          <label class="form-label" for="nama">Full name</label>
+          <label class="form-label" for="nama">Nama lengkap</label>
           <input class="form-control" type="text" id="nama" name="nama" maxlength="100"
                  value="{{.User.Nama}}" required>
         </div>
         <div>
-          <label class="form-label" for="kelas_id">Class</label>
+          <label class="form-label" for="kelas_id">Kelas</label>
           <select class="form-select" id="kelas_id" name="kelas_id" required>
             {{range .Kelas}}
             <option value="{{.ID}}"{{if eq .ID $.User.KelasID}} selected{{end}}>{{.Nama}}</option>
@@ -23,7 +23,7 @@
           </select>
         </div>
         <div>
-          <label class="form-label" for="jurusan_id">Major</label>
+          <label class="form-label" for="jurusan_id">Jurusan</label>
           <select class="form-select" id="jurusan_id" name="jurusan_id" required>
             {{range .Jurusan}}
             <option value="{{.ID}}"{{if eq .ID $.User.JurusanID}} selected{{end}}>{{.Nama}}</option>
@@ -31,7 +31,7 @@
           </select>
         </div>
         <div>
-          <button class="btn btn-primary" type="submit"><i class="bi bi-check2 me-2" aria-hidden="true"></i>Save profile</button>
+          <button class="btn btn-primary" type="submit"><i class="bi bi-check2 me-2" aria-hidden="true"></i>Simpan profil</button>
         </div>
       </form>
     </div>
@@ -45,7 +45,7 @@
           <div class="text-body-secondary small">Email</div>
           <div class="fw-semibold">{{.User.Email}}</div>
         </div>
-        <p class="text-body-secondary small mb-0">Username and email are fixed.</p>
+        <p class="text-body-secondary small mb-0">Username dan email tidak dapat diubah.</p>
       </div>
     </div>
   </div>

@@ -5,41 +5,47 @@
   </div>
   <div class="d-flex flex-wrap gap-2">
     {{if eq .Quiz.Status "nonaktif"}}
-    <form method="post" action="/teacher/quiz/{{.Quiz.ID}}/status" data-fetch data-success="Quiz &quot;{{.Quiz.Judul}}&quot; activated." class="m-0">
+    <form method="post" action="/teacher/quiz/{{.Quiz.ID}}/status" data-fetch data-success="Kuis &quot;{{.Quiz.Judul}}&quot; diaktifkan." class="m-0">
       <input type="hidden" name="status" value="aktif">
-      <button class="btn btn-success" type="submit"><i class="bi bi-play-circle me-2" aria-hidden="true"></i>Activate</button>
+      <button class="btn btn-success" type="submit"><i class="bi bi-play-circle me-2" aria-hidden="true"></i>Aktifkan</button>
     </form>
     {{else if eq .Quiz.Status "aktif"}}
-    <form method="post" action="/teacher/quiz/{{.Quiz.ID}}/status" data-fetch data-success="Quiz &quot;{{.Quiz.Judul}}&quot; deactivated." class="m-0">
+    <form method="post" action="/teacher/quiz/{{.Quiz.ID}}/status" data-fetch data-success="Kuis &quot;{{.Quiz.Judul}}&quot; dinonaktifkan." class="m-0">
       <input type="hidden" name="status" value="nonaktif">
-      <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-pause-circle me-2" aria-hidden="true"></i>Deactivate</button>
+      <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-pause-circle me-2" aria-hidden="true"></i>Nonaktifkan</button>
     </form>
     {{end}}
-    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#shareModal" title="Share quiz" aria-label="Share quiz" data-quiz-tooltip data-bs-placement="bottom"><i class="bi bi-share me-2" aria-hidden="true"></i>Share</button>
-    <a class="btn btn-outline-primary" href="/teacher/quiz/{{.Quiz.ID}}/results"><i class="bi bi-bar-chart-line me-2" aria-hidden="true"></i>Results</a>
-    <a class="btn btn-outline-secondary" href="/teacher/quiz/{{.Quiz.ID}}/monitor"><i class="bi bi-binoculars me-2" aria-hidden="true"></i>Live monitor</a>
-    <form method="post" action="/teacher/quiz/{{.Quiz.ID}}/delete" data-fetch data-confirm="Delete this quiz?" data-success="Quiz &quot;{{.Quiz.Judul}}&quot; deleted successfully." data-next="/teacher/quiz" class="m-0">
-      <button class="btn btn-outline-danger" type="submit" title="Delete" aria-label="Delete" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#shareModal" title="Bagikan kuis" aria-label="Bagikan kuis" data-quiz-tooltip data-bs-placement="bottom"><i class="bi bi-share me-2" aria-hidden="true"></i>Bagikan</button>
+    <a class="btn btn-outline-primary" href="/teacher/quiz/{{.Quiz.ID}}/results"><i class="bi bi-bar-chart-line me-2" aria-hidden="true"></i>Hasil</a>
+    <a class="btn btn-outline-secondary" href="/teacher/quiz/{{.Quiz.ID}}/monitor"><i class="bi bi-binoculars me-2" aria-hidden="true"></i>Pemantauan langsung</a>
+    <form method="post" action="/teacher/quiz/{{.Quiz.ID}}/delete" data-fetch data-confirm="Hapus kuis ini?" data-success="Kuis &quot;{{.Quiz.Judul}}&quot; berhasil dihapus." data-next="/teacher/quiz" class="m-0">
+      <button class="btn btn-outline-danger" type="submit" title="Hapus" aria-label="Hapus" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-trash3" aria-hidden="true"></i></button>
     </form>
   </div>
 </div>
 
 <ul class="nav nav-tabs mb-3" id="quiz-tabs" role="tablist">
   <li class="nav-item" role="presentation">
-    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-questions" type="button" role="tab"><i class="bi bi-list-check me-2" aria-hidden="true"></i>Questions ({{len .Questions}})</button>
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-questions" type="button" role="tab"><i class="bi bi-list-check me-2" aria-hidden="true"></i>Pertanyaan ({{len .Questions}})</button>
+  </li>
+  {{- /* Settings lock: any status but nonaktif renders the tab disabled
+         (native attr + class + aria) and the pane read-only; teacher.js
+         additionally guards the #tab-settings deep link because Bootstrap's
+         Tab.show() ignores disabled. The title also rides the nav-item —
+         .nav-link.disabled is pointer-events:none, so only the parent can
+         surface the tooltip on hover. */ -}}
+  <li class="nav-item" role="presentation"{{if ne .Quiz.Status "nonaktif"}} title="Pengaturan terkunci setelah kuis diaktifkan."{{end}}>
+    <button class="nav-link{{if ne .Quiz.Status "nonaktif"}} disabled{{end}}" data-bs-toggle="tab" data-bs-target="#tab-settings" type="button" role="tab"{{if ne .Quiz.Status "nonaktif"}} disabled aria-disabled="true" title="Pengaturan terkunci setelah kuis diaktifkan."{{end}}><i class="bi bi-gear me-2" aria-hidden="true"></i>Pengaturan</button>
   </li>
   <li class="nav-item" role="presentation">
-    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-settings" type="button" role="tab"><i class="bi bi-gear me-2" aria-hidden="true"></i>Settings</button>
-  </li>
-  <li class="nav-item" role="presentation">
-    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-participants" type="button" role="tab"><i class="bi bi-people me-2" aria-hidden="true"></i>Participants ({{len .Participants}})</button>
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-participants" type="button" role="tab"><i class="bi bi-people me-2" aria-hidden="true"></i>Peserta ({{len .Participants}})</button>
   </li>
 </ul>
 
 <div class="tab-content">
   <div class="tab-pane fade show active" id="tab-questions" role="tabpanel">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-      <h2 class="h6 mb-0">Questions (<span id="q-count">{{len .Questions}}</span>)</h2>
+      <h2 class="h6 mb-0">Pertanyaan (<span id="q-count">{{len .Questions}}</span>)</h2>
       <div class="d-flex gap-2 flex-grow-1">
         {{- /* ?qq= live search: native GET (no JS) reloads the default-active
                questions tab; teacher.js upgrades it to a debounced fetch +
@@ -48,17 +54,17 @@
           {{if .Table.Q}}<input type="hidden" name="q" value="{{.Table.Q}}">{{end}}
           {{if .Status}}<input type="hidden" name="status" value="{{.Status}}">{{end}}
           {{if .BankQ}}<input type="hidden" name="bq" value="{{.BankQ}}">{{end}}
-          <label class="visually-hidden" for="q-search">Search questions</label>
-          <input class="form-control form-control-sm" type="search" id="q-search" name="qq" value="{{.QuestionQ}}" placeholder="Search questions…">
+          <label class="visually-hidden" for="q-search">Cari pertanyaan</label>
+          <input class="form-control form-control-sm" type="search" id="q-search" name="qq" value="{{.QuestionQ}}" placeholder="Cari pertanyaan…">
         </form>
-        <button type="button" class="btn btn-sm btn-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#bankModal"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add from question bank</button>
+        <button type="button" class="btn btn-sm btn-primary text-nowrap" data-bs-toggle="modal" data-bs-target="#bankModal"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Tambahkan dari bank pertanyaan</button>
       </div>
     </div>
     {{- /* #q-results is the live-search swap target: everything the ?qq=
            server response re-renders. The input and #q-count stay outside
            so focus survives every swap. */ -}}
     <div id="q-results">
-    <p id="q-empty" class="text-body-secondary{{if or .Questions .QuestionQ}} d-none{{end}}">No questions yet — add from the bank.</p>
+    <p id="q-empty" class="text-body-secondary{{if or .Questions .QuestionQ}} d-none{{end}}">Belum ada pertanyaan — tambahkan dari bank pertanyaan.</p>
     {{- /* #q-card carries data-reorder-endpoint ONLY on the unfiltered list:
            a ?qq= slice cannot post a complete order, so the move buttons
            (and teacher.js's reorder wiring) exist only when the full list
@@ -68,22 +74,22 @@
       <div class="card-body">
         <table class="table align-middle mb-0">
           <thead>
-            <tr><th>#</th><th>Question</th><th>Type</th><th class="text-end">Actions</th></tr>
+            <tr><th>#</th><th>Pertanyaan</th><th>Jenis</th><th class="text-end">Aksi</th></tr>
           </thead>
           <tbody id="q-body">
             {{range $i, $q := .Questions}}
             <tr data-seq="{{$q.Seq}}" data-qid="{{$q.ID}}">
               <td class="q-seq">{{$q.Seq}}</td>
               <td class="q-teks text-break">{{$q.Teks}}</td>
-              <td class="q-type">{{if eq $q.Type "pg"}}Single choice{{else if eq $q.Type "multi"}}Multiple choice{{else}}Essay{{end}}</td>
+              <td class="q-type">{{if eq $q.Type "pg"}}Pilihan ganda{{else if eq $q.Type "multi"}}Pilihan ganda majemuk{{else}}Esai{{end}}</td>
               <td class="q-actions text-end text-nowrap">
                 {{- /* order buttons exist only on the unfiltered list — a
                        ?qq= slice could never post a complete order */ -}}
                 {{if not $.QuestionQ}}
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-move="up"{{if eq $i 0}} disabled aria-disabled="true"{{end}} title="Move up" aria-label="Move question up" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-chevron-up" aria-hidden="true"></i></button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-move="down"{{if eq $i (sub (len $.Questions) 1)}} disabled aria-disabled="true"{{end}} title="Move down" aria-label="Move question down" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-chevron-down" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-move="up"{{if eq $i 0}} disabled aria-disabled="true"{{end}} title="Naikkan" aria-label="Naikkan urutan pertanyaan" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-chevron-up" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-move="down"{{if eq $i (sub (len $.Questions) 1)}} disabled aria-disabled="true"{{end}} title="Turunkan" aria-label="Turunkan urutan pertanyaan" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-chevron-down" aria-hidden="true"></i></button>
                 {{end}}
-                <button type="button" class="btn btn-sm btn-outline-danger" data-post="/teacher/quiz/{{$.Quiz.ID}}/questions/{{$q.ID}}/delete" data-confirm="Remove this question from the quiz?" data-success="Question removed from the quiz." title="Remove from quiz" aria-label="Remove from quiz" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-post="/teacher/quiz/{{$.Quiz.ID}}/questions/{{$q.ID}}/delete" data-confirm="Hapus pertanyaan ini dari kuis?" data-success="Pertanyaan dihapus dari kuis." title="Hapus dari kuis" aria-label="Hapus dari kuis" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-trash3" aria-hidden="true"></i></button>
               </td>
             </tr>
             {{end}}
@@ -93,7 +99,7 @@
     </div>
     {{- /* SSR no-match state: visible exactly when ?qq= is set and matched
            nothing — teacher.js only swaps this whole region in. */ -}}
-    <p id="q-empty-search" class="text-body-secondary{{if not (and .QuestionQ (not .Questions))}} d-none{{end}}">No questions match your search.</p>
+    <p id="q-empty-search" class="text-body-secondary{{if not (and .QuestionQ (not .Questions))}} d-none{{end}}">Tidak ada pertanyaan yang cocok dengan pencarian Anda.</p>
     <template id="question-row-tpl">
       <tr>
         <td class="q-seq"></td>
@@ -105,16 +111,27 @@
     </div>{{/* /#q-results */}}
   </div>
 
-  <div class="tab-pane fade" id="tab-settings" role="tabpanel">
+  {{- /* Locked pane (nonaktif only keeps the Save button): the marker
+         drives teacher.js's control-disable block; the alert + the
+         existing form-text hint explain the lock in-page. */ -}}
+  <div class="tab-pane fade" id="tab-settings" role="tabpanel"{{if ne .Quiz.Status "nonaktif"}} data-settings-locked="true"{{end}}>
     <div class="card">
       <div class="card-body">
-        <form method="post" action="/teacher/quiz/{{.Quiz.ID}}/edit" data-fetch data-success="Settings for quiz &quot;{{.Quiz.Judul}}&quot; saved successfully.">
+        {{if ne .Quiz.Status "nonaktif"}}
+        <div class="alert alert-secondary d-flex align-items-center gap-2" role="status">
+          <i class="bi bi-lock-fill" aria-hidden="true"></i>
+          <span>Pengaturan terkunci setelah kuis diaktifkan.</span>
+        </div>
+        {{end}}
+        <form method="post" action="/teacher/quiz/{{.Quiz.ID}}/edit" data-fetch data-success="Pengaturan kuis &quot;{{.Quiz.Judul}}&quot; berhasil disimpan.">
           {{template "settings-fields" .}}
+          {{if eq .Quiz.Status "nonaktif"}}
           <div class="mt-3">
-            <button class="btn btn-primary" type="submit"><i class="bi bi-check2 me-2" aria-hidden="true"></i>Save settings</button>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-check2 me-2" aria-hidden="true"></i>Simpan pengaturan</button>
           </div>
+          {{end}}
         </form>
-        <div class="form-text mt-2">Settings lock once the quiz is active or has participants.</div>
+        <div class="form-text mt-2">Pengaturan terkunci setelah kuis aktif atau sudah ada peserta.</div>
       </div>
     </div>
   </div>
@@ -122,12 +139,12 @@
   <div class="tab-pane fade" id="tab-participants" role="tabpanel">
     <div class="card mb-3">
       <div class="card-body">
-        <form method="post" action="/teacher/quiz/{{.Quiz.ID}}/participants/add" data-fetch data-json data-success="Student &quot;{username}&quot; added to the quiz." class="row g-2 align-items-end">
+          <form method="post" action="/teacher/quiz/{{.Quiz.ID}}/participants/add" data-fetch data-json data-success="Murid &quot;{username}&quot; ditambahkan ke kuis." class="row g-2 align-items-end">
           <div class="col-sm-5">
-            <label class="form-label" for="pusername">Add student by username</label>
+            <label class="form-label" for="pusername">Tambahkan murid berdasarkan username</label>
             <input class="form-control" id="pusername" name="username" required>
           </div>
-          <div class="col-auto"><button class="btn btn-primary" type="submit"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Add participant</button></div>
+          <div class="col-auto"><button class="btn btn-primary" type="submit"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Tambahkan peserta</button></div>
         </form>
       </div>
     </div>
@@ -135,22 +152,22 @@
     {{- /* #table-results is the toolbar live-search swap target: status
            links, empty state, rows and pagination all re-render together. */ -}}
     <div id="table-results">
-    <div class="btn-group btn-group-sm mb-3" role="group" aria-label="Filter participants by status">
-      <a class="btn {{if not .Status}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz/{{$.Quiz.ID}}{{if $.Table.Q}}?q={{urlquery $.Table.Q}}{{end}}">All</a>
-      <a class="btn {{if eq .Status "pending"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz/{{$.Quiz.ID}}?status=pending{{if $.Table.Q}}&q={{urlquery $.Table.Q}}{{end}}">Pending</a>
-      <a class="btn {{if eq .Status "registered"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz/{{$.Quiz.ID}}?status=registered{{if $.Table.Q}}&q={{urlquery $.Table.Q}}{{end}}">Registered</a>
-      <a class="btn {{if eq .Status "started"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz/{{$.Quiz.ID}}?status=started{{if $.Table.Q}}&q={{urlquery $.Table.Q}}{{end}}">Running</a>
-      <a class="btn {{if eq .Status "selesai"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz/{{$.Quiz.ID}}?status=selesai{{if $.Table.Q}}&q={{urlquery $.Table.Q}}{{end}}">Finished</a>
-      <a class="btn {{if eq .Status "dikeluarkan"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz/{{$.Quiz.ID}}?status=dikeluarkan{{if $.Table.Q}}&q={{urlquery $.Table.Q}}{{end}}">Removed</a>
+    <div class="btn-group btn-group-sm mb-3" role="group" aria-label="Filter peserta berdasarkan status">
+      <a class="btn {{if not .Status}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz/{{$.Quiz.ID}}{{if $.Table.Q}}?q={{urlquery $.Table.Q}}{{end}}">Semua</a>
+      <a class="btn {{if eq .Status "pending"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz/{{$.Quiz.ID}}?status=pending{{if $.Table.Q}}&q={{urlquery $.Table.Q}}{{end}}">Menunggu</a>
+      <a class="btn {{if eq .Status "registered"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz/{{$.Quiz.ID}}?status=registered{{if $.Table.Q}}&q={{urlquery $.Table.Q}}{{end}}">Terdaftar</a>
+      <a class="btn {{if eq .Status "started"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz/{{$.Quiz.ID}}?status=started{{if $.Table.Q}}&q={{urlquery $.Table.Q}}{{end}}">Berjalan</a>
+      <a class="btn {{if eq .Status "selesai"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz/{{$.Quiz.ID}}?status=selesai{{if $.Table.Q}}&q={{urlquery $.Table.Q}}{{end}}">Selesai</a>
+      <a class="btn {{if eq .Status "dikeluarkan"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="/teacher/quiz/{{$.Quiz.ID}}?status=dikeluarkan{{if $.Table.Q}}&q={{urlquery $.Table.Q}}{{end}}">Dikeluarkan</a>
     </div>
     {{if not .Table.Total}}
-    <p class="text-body-secondary">{{if or .Table.Q .Table.Params}}No results match your search.{{else}}No participants yet.{{end}}</p>
+    <p class="text-body-secondary">{{if or .Table.Q .Table.Params}}Tidak ada hasil yang cocok dengan pencarian Anda.{{else}}Belum ada peserta.{{end}}</p>
     {{else}}
     <div class="card">
       <div class="card-body">
         <table class="table align-middle mb-0">
           <thead>
-            <tr><th>Username</th><th>Full name</th><th>Status</th><th>Attempt</th><th class="text-end">Score</th></tr>
+            <tr><th>Username</th><th>Nama lengkap</th><th>Status</th><th>Percobaan</th><th class="text-end">Nilai</th></tr>
           </thead>
           <tbody>
             {{range .ParticipantRows}}
@@ -176,24 +193,24 @@
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="modal-title h5" id="shareModalTitle">Share quiz</h2>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h2 class="modal-title h5" id="shareModalTitle">Bagikan kuis</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
       </div>
       <div class="modal-body d-flex flex-column align-items-center gap-3">
-        <img src="/teacher/quiz/{{.Quiz.ID}}/qr" alt="Join QR code" width="220" height="220">
-        <div class="form-text">Scan to open the quiz.</div>
+        <img src="/teacher/quiz/{{.Quiz.ID}}/qr" alt="Kode QR gabung" width="220" height="220">
+        <div class="form-text">Pindai untuk membuka kuis.</div>
         <div class="d-flex gap-2 align-items-center w-100">
-          <label class="visually-hidden" for="share-url">Join link</label>
+          <label class="visually-hidden" for="share-url">Tautan gabung</label>
           <input class="form-control form-control-sm" type="text" id="share-url" value="{{.JoinURL}}" readonly>
-          <button type="button" class="btn btn-outline-secondary" id="share-copy-url" title="Copy link" aria-label="Copy link" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-clipboard" aria-hidden="true"></i></button>
+          <button type="button" class="btn btn-outline-secondary" id="share-copy-url" title="Salin tautan" aria-label="Salin tautan" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-clipboard" aria-hidden="true"></i></button>
         </div>
         <div class="text-center w-100">
           <div class="fs-3 fw-semibold text-center" id="share-code">{{.Quiz.Code}}</div>
-          <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="share-copy-code" title="Copy code" aria-label="Copy code" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-clipboard" aria-hidden="true"></i></button>
+          <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="share-copy-code" title="Salin kode" aria-label="Salin kode" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="bi bi-clipboard" aria-hidden="true"></i></button>
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Close</button>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Tutup</button>
       </div>
     </div>
   </div>
@@ -203,8 +220,8 @@
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="modal-title h5" id="bankModalTitle">Add from question bank</h2>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h2 class="modal-title h5" id="bankModalTitle">Tambahkan dari bank pertanyaan</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
       </div>
       <div class="modal-body">
         <div class="mb-3">
@@ -215,15 +232,15 @@
             {{if .Table.Q}}<input type="hidden" name="q" value="{{.Table.Q}}">{{end}}
             {{if .Status}}<input type="hidden" name="status" value="{{.Status}}">{{end}}
             {{if .QuestionQ}}<input type="hidden" name="qq" value="{{.QuestionQ}}">{{end}}
-            <label class="visually-hidden" for="bank-search">Search questions</label>
-            <input class="form-control" type="search" id="bank-search" name="bq" value="{{.BankQ}}" placeholder="Search questions…" aria-label="Search questions">
+            <label class="visually-hidden" for="bank-search">Cari pertanyaan</label>
+            <input class="form-control" type="search" id="bank-search" name="bq" value="{{.BankQ}}" placeholder="Cari pertanyaan…" aria-label="Cari pertanyaan">
           </form>
         </div>
-        <div class="btn-group btn-group-sm mb-3" role="group" aria-label="Filter by question length">
-          <button type="button" class="btn btn-primary" data-bank-len="">All</button>
-          <button type="button" class="btn btn-outline-secondary" data-bank-len="short">Short (&lt;80)</button>
-          <button type="button" class="btn btn-outline-secondary" data-bank-len="medium">Medium (80–200)</button>
-          <button type="button" class="btn btn-outline-secondary" data-bank-len="long">Long (&gt;200)</button>
+        <div class="btn-group btn-group-sm mb-3" role="group" aria-label="Filter berdasarkan panjang pertanyaan">
+          <button type="button" class="btn btn-primary" data-bank-len="">Semua</button>
+          <button type="button" class="btn btn-outline-secondary" data-bank-len="short">Pendek (&lt;80)</button>
+          <button type="button" class="btn btn-outline-secondary" data-bank-len="medium">Sedang (80–200)</button>
+          <button type="button" class="btn btn-outline-secondary" data-bank-len="long">Panjang (&gt;200)</button>
         </div>
         {{- /* #bank-results is the live-search swap target (list + no-match
                states). It sits AFTER the length buttons: those stay outside
@@ -232,25 +249,25 @@
                masquerades as an empty bank. */ -}}
         <div id="bank-results">
         {{if .BankEmpty}}
-        <p class="text-body-secondary mb-0">No questions in the bank yet — <a href="/teacher/questions/new">add your first one</a>.</p>
+        <p class="text-body-secondary mb-0">Belum ada pertanyaan di bank pertanyaan — <a href="/teacher/questions/new">tambahkan yang pertama</a>.</p>
         {{else}}
         {{if .Bank}}
         <div class="list-group" id="bank-list">
           {{range .Bank}}
           <button type="button" class="list-group-item list-group-item-action d-flex align-items-start gap-2" data-add-q="{{.ID}}" data-teks="{{.Teks}}" data-type="{{.Type}}" data-len="{{if lt .TeksLen 80}}short{{else if le .TeksLen 200}}medium{{else}}long{{end}}"{{if index $.Composed .ID}} data-added="1" disabled aria-disabled="true"{{end}}>
             <span class="flex-grow-1 text-break">{{.Teks}}</span>
-            <span class="text-body-secondary small text-nowrap flex-shrink-0">{{if eq .Type "pg"}}Single choice{{else if eq .Type "multi"}}Multiple choice{{else}}Essay{{end}}</span>
-            {{if index $.Composed .ID}}<span class="badge text-bg-secondary">In quiz</span>{{end}}
+            <span class="text-body-secondary small text-nowrap flex-shrink-0">{{if eq .Type "pg"}}Pilihan ganda{{else if eq .Type "multi"}}Pilihan ganda majemuk{{else}}Esai{{end}}</span>
+            {{if index $.Composed .ID}}<span class="badge text-bg-secondary">Dalam kuis</span>{{end}}
           </button>
           {{end}}
         </div>
         {{end}}
-        <p class="text-body-secondary mt-2 mb-0{{if .Bank}} d-none{{end}}" id="bank-no-match">No questions match your search.</p>
+        <p class="text-body-secondary mt-2 mb-0{{if .Bank}} d-none{{end}}" id="bank-no-match">Tidak ada pertanyaan yang cocok dengan pencarian Anda.</p>
         {{end}}
         </div>{{/* /#bank-results */}}
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Close</button>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Tutup</button>
       </div>
     </div>
   </div>

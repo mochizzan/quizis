@@ -219,7 +219,7 @@ func monitorData(ctx context.Context, db *sql.DB, live *Live, quizID uint64) (ma
 		startedUnix = startedAt.Time.Unix()
 	}
 	return map[string]any{
-		"Title":        "Monitor — " + judul,
+		"Title":        "Pemantauan — " + judul,
 		"ID":           quizID,
 		"Judul":        judul,
 		"Code":         code,
@@ -307,10 +307,10 @@ func (g *Global) MonitorPage(c *echo.Context) error {
 		return err
 	}
 	if data == nil {
-		return fail(c, http.StatusNotFound, ErrNotFound, "Quiz not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan.")
 	}
 	judul, _ := data["Judul"].(string)
-	data["Crumbs"] = QuizCrumbs(id, judul, "Monitor")
+	data["Crumbs"] = QuizCrumbs(id, judul, "Pemantauan")
 	return c.Render(http.StatusOK, "page-teacher-monitor", data)
 }
 
@@ -318,7 +318,7 @@ func (g *Global) MonitorPage(c *echo.Context) error {
 func monitorQuizID(c *echo.Context) (uint64, *respError) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil || id == 0 {
-		return 0, errResp(http.StatusNotFound, ErrNotFound, "Quiz not found.")
+		return 0, errResp(http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan.")
 	}
 	return id, nil
 }
@@ -342,7 +342,7 @@ func (g *Global) ParticipantAction(c *echo.Context) error {
 	}
 	pid, err := strconv.ParseUint(c.Param("pid"), 10, 64)
 	if err != nil || pid == 0 {
-		return fail(c, http.StatusNotFound, ErrNotFound, "Participant not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Peserta tidak ditemukan.")
 	}
 	var body struct {
 		Action string `json:"action"`
@@ -369,7 +369,7 @@ func (g *Global) ParticipantAction(c *echo.Context) error {
 	case "cheat_toggle":
 		return g.cheatToggle(ctx, c, quiz, pid)
 	default:
-		return fail(c, http.StatusBadRequest, ErrValidation, "Unknown action.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Aksi tidak dikenal.")
 	}
 }
 
@@ -383,10 +383,10 @@ func (g *Global) existsParticipant(ctx context.Context, quizID, pid uint64) (boo
 }
 
 const (
-	msgApproveGone    = "This request can no longer be approved."
-	msgNotPending     = "This request is no longer pending."
-	msgAlreadyRemoved = "This student has already been removed."
-	msgNotRunning     = "This quiz is not running."
+	msgApproveGone    = "Permintaan ini tidak dapat disetujui lagi."
+	msgNotPending     = "Permintaan ini tidak lagi tertunda."
+	msgAlreadyRemoved = "Murid ini sudah dikeluarkan."
+	msgNotRunning     = "Kuis ini tidak sedang berjalan."
 )
 
 // approvePending flips pending → registered, but only while the quiz is
@@ -406,7 +406,7 @@ func (g *Global) approvePending(ctx context.Context, c *echo.Context, quizID, pi
 			return err
 		}
 		if !exists {
-			return fail(c, http.StatusNotFound, ErrNotFound, "Participant not found.")
+			return fail(c, http.StatusNotFound, ErrNotFound, "Peserta tidak ditemukan.")
 		}
 		return fail(c, http.StatusConflict, ErrConflict, msgApproveGone)
 	}
@@ -428,7 +428,7 @@ func (g *Global) rejectPending(ctx context.Context, c *echo.Context, quizID, pid
 			return err
 		}
 		if !exists {
-			return fail(c, http.StatusNotFound, ErrNotFound, "Participant not found.")
+			return fail(c, http.StatusNotFound, ErrNotFound, "Peserta tidak ditemukan.")
 		}
 		return fail(c, http.StatusConflict, ErrConflict, msgNotPending)
 	}
@@ -454,7 +454,7 @@ func (g *Global) removeParticipant(ctx context.Context, c *echo.Context, quiz qu
 		Scan(&status, &cheating, &name)
 	if errors.Is(err, sql.ErrNoRows) {
 		tx.Rollback()
-		return fail(c, http.StatusNotFound, ErrNotFound, "Participant not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Peserta tidak ditemukan.")
 	}
 	if err != nil {
 		tx.Rollback()
@@ -529,7 +529,7 @@ func (g *Global) cheatToggle(ctx context.Context, c *echo.Context, quiz quizDeta
 			return err
 		}
 		if !exists {
-			return fail(c, http.StatusNotFound, ErrNotFound, "Participant not found.")
+			return fail(c, http.StatusNotFound, ErrNotFound, "Peserta tidak ditemukan.")
 		}
 	}
 	var cheating bool
@@ -585,9 +585,9 @@ func (g *Global) Start(c *echo.Context) error {
 		// per-question and no-timer quizzes never enter berjalan: each
 		// student starts in their own workspace and the teacher closes
 		// with POST .../status
-		msg := "This quiz runs on per-question timers."
+		msg := "Kuis ini memakai timer per pertanyaan."
 		if quiz.TimerType == "tanpa_timer" {
-			msg = "This quiz has no timer."
+			msg = "Kuis ini tanpa timer."
 		}
 		return fail(c, http.StatusConflict, ErrConflict, msg)
 	}
@@ -596,7 +596,7 @@ func (g *Global) Start(c *echo.Context) error {
 		return err
 	}
 	if len(questions) == 0 {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Add at least one question.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Tambahkan setidaknya satu pertanyaan.")
 	}
 
 	tx, err := g.DB.BeginTx(ctx, nil)
@@ -616,11 +616,11 @@ func (g *Global) Start(c *echo.Context) error {
 		_ = g.DB.QueryRowContext(ctx, `SELECT status FROM quizzes WHERE id = ?`, quiz.ID).Scan(&status)
 		switch status {
 		case "berjalan":
-			return fail(c, http.StatusConflict, ErrConflict, "The quiz has already started.")
+			return fail(c, http.StatusConflict, ErrConflict, "Kuis sudah dimulai.")
 		case "selesai":
-			return fail(c, http.StatusConflict, ErrConflict, "This quiz has already ended.")
+			return fail(c, http.StatusConflict, ErrConflict, "Kuis ini sudah berakhir.")
 		default:
-			return fail(c, http.StatusConflict, ErrConflict, "Activate the quiz before starting it.")
+			return fail(c, http.StatusConflict, ErrConflict, "Aktifkan kuis sebelum memulainya.")
 		}
 	}
 	var startedAt time.Time
@@ -742,7 +742,7 @@ func (g *Global) Stop(c *echo.Context) error {
 		return fail(c, rerr.Status, rerr.Code, rerr.Msg)
 	}
 	if !body.Confirm {
-		return fail(c, http.StatusBadRequest, ErrValidation, "Confirmation is required.")
+		return fail(c, http.StatusBadRequest, ErrValidation, "Konfirmasi wajib diisi.")
 	}
 	ctx := c.Request().Context()
 	if _, rerr, err := quizByID(ctx, g.DB, id); err != nil {

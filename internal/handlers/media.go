@@ -23,18 +23,18 @@ import (
 func (t *Teacher) ServeQuestionImage(c *echo.Context) error {
 	sess := mw.SessionFrom(c)
 	if sess == nil || (sess.Role != "guru" && sess.Role != "murid") {
-		return fail(c, http.StatusUnauthorized, ErrUnauthenticated, "Sign in to view this image.")
+		return fail(c, http.StatusUnauthorized, ErrUnauthenticated, "Masuk untuk melihat gambar ini.")
 	}
 	id, err := strconv.ParseUint(c.Param("imageId"), 10, 32)
 	if err != nil {
-		return fail(c, http.StatusNotFound, ErrNotFound, "Image not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Gambar tidak ditemukan.")
 	}
 	var storedPath, filename, mime, sha string
 	err = t.DB.QueryRowContext(c.Request().Context(),
 		`SELECT path, filename, mime_type, sha256 FROM question_images
 		 WHERE id = ? AND active = 1`, id).Scan(&storedPath, &filename, &mime, &sha)
 	if errors.Is(err, sql.ErrNoRows) {
-		return fail(c, http.StatusNotFound, ErrNotFound, "Image not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Gambar tidak ditemukan.")
 	}
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func (t *Teacher) ServeQuestionImage(c *echo.Context) error {
 	// defense before any filesystem call: only the exact original-image
 	// layout and allowlisted MIME types are ever served
 	if !uploads.ValidRefPath(storedPath) || !uploads.AllowedMIME(mime) {
-		return fail(c, http.StatusNotFound, ErrNotFound, "Image not found.")
+		return fail(c, http.StatusNotFound, ErrNotFound, "Gambar tidak ditemukan.")
 	}
 	etag := `"` + sha + `"`
 	h := c.Response().Header()
@@ -60,14 +60,14 @@ func (t *Teacher) ServeQuestionImage(c *echo.Context) error {
 	f, err := os.Open(full)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fail(c, http.StatusNotFound, ErrNotFound, "Image not found.")
+			return fail(c, http.StatusNotFound, ErrNotFound, "Gambar tidak ditemukan.")
 		}
-		return fail(c, http.StatusInternalServerError, ErrServer, "Could not read the image — please try again.")
+		return fail(c, http.StatusInternalServerError, ErrServer, "Tidak dapat membaca gambar — silakan coba lagi.")
 	}
 	defer f.Close()
 	st, err := f.Stat()
 	if err != nil {
-		return fail(c, http.StatusInternalServerError, ErrServer, "Could not read the image — please try again.")
+		return fail(c, http.StatusInternalServerError, ErrServer, "Tidak dapat membaca gambar — silakan coba lagi.")
 	}
 	// Content-Type was set above, so ServeContent serves it as-is (no
 	// re-sniff) and adds Range/HEAD/Last-Modified handling.
