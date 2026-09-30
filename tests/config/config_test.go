@@ -69,6 +69,20 @@ func TestLoad(t *testing.T) {
 			wantGuru: "guru",
 		},
 		{
+			// The image carries no .env: inside a container every value
+			// arrives as OS env injected by compose env_file, so Load must
+			// resolve fully without a file.
+			name: "missing file resolves entirely from OS env",
+			file: "",
+			setEnv: map[string]string{
+				"GURU_USER": "osguru", "GURU_PASS": "ospass",
+				"DB_USER": "osdb", "DB_PASS": "osdbpass", "DB_NAME": "osname",
+				"DB_HOST": "db",
+			},
+			wantHost: "db",
+			wantGuru: "osguru",
+		},
+		{
 			name:     "file wins over OS env for keys present in file",
 			file:     fullFile,
 			setEnv:   map[string]string{"GURU_USER": "osuser", "DB_HOST": "oshost"},

@@ -1,8 +1,13 @@
-// Package config loads application configuration from a .env file via cleanenv.
+// Package config loads application configuration via cleanenv: from a .env
+// file when one exists (local go run / go test), or purely from the OS
+// environment when it does not (containers — the image never carries .env).
 package config
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
+	"os"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
@@ -25,11 +30,27 @@ type Config struct {
 	TestDBName string `env:"TEST_DB_NAME" env-default:"quiz_test"`
 }
 
-// Load reads the config file at path and validates required fields.
-// For any key present in the file the file value wins; keys absent from the
-// file resolve from OS env or the env-default fallback.
+// Load reads the configuration from path and validates required fields.
+//
+// The file is optional. A container never has one — the image excludes .env
+// (.dockerignore) and compose injects the host's .env.example/.env through
+// env_file at run time (the environment: section outranks env_file) — so
+// those values arrive as plain OS environment. When the file IS present
+// (local `go run` / `go test`), its keys win over OS env: cleanenv's
+// parseENV writes every file key into the process environment
+// unconditionally. Either way the required-field check fails fast at boot.
 func Load(path string) (*Config, error) {
 	var c Config
+	if _, err := os.Stat(path); err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
+			return nil, fmt.Errorf("read config %s: %w", path, err)
+		}
+		// No file (container): resolve from OS env + env-default only.
+		if err := cleanenv.ReadEnv(&c); err != nil {
+			return nil, fmt.Errorf("read config %s (absent, environment only): %w", path, err)
+		}
+		return &c, nil
+	}
 	if err := cleanenv.ReadConfig(path, &c); err != nil {
 		return nil, fmt.Errorf("read config %s: %w", path, err)
 	}
