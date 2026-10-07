@@ -25,6 +25,7 @@ type historyRow struct {
 	Judul         string
 	AttemptNo     int
 	Status        string
+	StatusLabel   string
 	Removed       bool
 	Cheating      bool
 	Score         sql.NullFloat64 // COALESCE(final, auto)
@@ -83,6 +84,7 @@ func (s *Student) HistoryPage(c *echo.Context) error {
 		}
 		r.Cheating = cheating != 0
 		r.Removed = r.Status == "dikeluarkan"
+		r.StatusLabel = participantStatusLabel(r.Status)
 		switch {
 		case final.Valid:
 			r.Score = final
@@ -376,16 +378,17 @@ func (s *Student) HistoryDetail(c *echo.Context) error {
 	}
 
 	return c.Render(http.StatusOK, "page-student-history-detail", map[string]any{
-		"Title":     judul,
-		"Judul":     judul,
-		"AttemptNo": attemptNo,
-		"Status":    status,
-		"Removed":   status == "dikeluarkan",
-		"Cheating":  cheating != 0,
-		"ScoreText": scoreText,
-		"Rank":      rank,
-		"HV":        hv,
-		"Crumbs":    AttemptCrumbs(judul),
+		"Title":       judul,
+		"Judul":       judul,
+		"AttemptNo":   attemptNo,
+		"Status":      status,
+		"StatusLabel": participantStatusLabel(status),
+		"Removed":     status == "dikeluarkan",
+		"Cheating":    cheating != 0,
+		"ScoreText":   scoreText,
+		"Rank":        rank,
+		"HV":          hv,
+		"Crumbs":      AttemptCrumbs(judul),
 	})
 }
 

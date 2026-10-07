@@ -14,10 +14,12 @@
     return {
       status: pick("Status", "status"),
       timerType: pick("TimerType", "timer_type"),
+      timerLabel: pick("TimerLabel", "timer_label"),
       timerOn: pick("TimerOn", "timer_on"),
       endsAt: pick("EndsUnix", "ends_at") || 0,
       serverNow: pick("ServerNow", "server_now") || 0,
       cards: pick("Cards", "participants") || [],
+      rankingLive: pick("RankingLive", "ranking_live"),
       ranking: pick("Ranking", "ranking") || []
     };
   }
@@ -161,7 +163,7 @@
       var badges = el("span", "d-flex gap-1 align-items-center");
       if (c.cheating) badges.appendChild(el("span", "badge text-bg-danger", "Ditandai"));
       else if (v > 0) badges.appendChild(el("span", "badge text-bg-danger", v + " pelanggaran"));
-      badges.appendChild(el("span", "badge text-bg-secondary", c.status));
+      badges.appendChild(el("span", "badge text-bg-secondary", c.status_label || c.status));
       head.appendChild(badges);
       card.appendChild(head);
 
@@ -225,13 +227,16 @@
 
       var answer = el("div", "small");
       answer.setAttribute("data-answer-line", "");
-      var atext = fmtAnswer(c.answer);
+      // server-rendered display (letters via THIS murid's qorder) wins;
+      // fmtAnswer is only the legacy fallback when it is absent
+      var atext = c.answer_display || fmtAnswer(c.answer);
       // the answer carries ITS question (answer_question_pos from qorder) —
       // once the student moves on, the old answer stays attributed to its
       // own question and never reads as the answer to the current one
       answer.textContent = atext
         ? (c.answer_question_pos > 0
-            ? "jawaban pertanyaan " + c.answer_question_pos + ": " + atext
+            ? "jawaban pertanyaan " + c.answer_question_pos +
+              (c.answer_q_teks ? " · " + c.answer_q_teks : "") + ": " + atext
             : "jawaban: " + atext)
         : "";
       answer.hidden = !atext;
@@ -267,6 +272,12 @@
   }
 
   function renderRank() {
+    var section = document.getElementById("monitor-rank-section");
+    if (!state.rankingLive) {
+      if (section) section.hidden = true;
+      return;
+    }
+    if (section) section.hidden = false;
     var list = document.getElementById("monitor-rank");
     if (!list) return;
     list.textContent = "";
@@ -371,7 +382,7 @@
     if (act === "approve" || act === "reject" || act === "cheat_toggle") {
       post(actionURL(pid), { action: act }).then(function (r) {
         if (r.status >= 400) failThenReload(r); // state moved under us
-      }).catch(function () {});
+      }).catch(function () { failThenReload(null); });
     } else if (act === "remove") {
       removePid = pid;
       var name = document.getElementById("remove-student-name");
@@ -385,7 +396,7 @@
           post("/teacher/quiz/" + quizID + "/stop", { confirm: true }).then(function (r) {
             if (r.status === 200) doneThenReload("Kuis dihentikan — murid tidak dapat menjawab lagi.");
             else failThenReload(r);
-          }).catch(function () {});
+          }).catch(function () { failThenReload(null); });
         }, "danger");
     } else if (act === "close") {
       confirmThen("Tutup kuis sekarang? Murid tidak dapat menjawab lagi.",
@@ -400,7 +411,7 @@
             var modal = window.bootstrap && bootstrap.Modal.getOrCreateInstance(
               document.getElementById("confirmClose"));
             if (modal) modal.show();
-          }).catch(function () {});
+          }).catch(function () { failThenReload(null); });
         }, "danger");
     }
   });
@@ -419,7 +430,7 @@
           quizToast("success", who ? "Murid \"" + who + "\" dikeluarkan dari kuis."
             : "Murid dikeluarkan dari kuis.");
         }
-      }).catch(function () {});
+      }).catch(function () { failThenReload(null); });
     });
   }
 
@@ -430,7 +441,7 @@
         { status: "selesai", confirm: true }).then(function (r) {
           if (r.status === 200) doneThenReload("Kuis berhasil ditutup.");
           else failThenReload(r);
-        }).catch(function () {});
+        }).catch(function () { failThenReload(null); });
     });
   }
 
@@ -466,6 +477,10 @@
       card.answer_question_id = d.question_id;
       card.answer_question_pos = +d.question_pos || 0;
       card.answer = typeof d.answer === "string" ? d.answer : JSON.stringify(d.answer);
+      // server-rendered letter display + question text for THIS answer —
+      // absent/undefined falls back to fmtAnswer in renderCards
+      card.answer_display = d.answer_display;
+      card.answer_q_teks = d.q_teks;
       // linear mode advances the question on answer — follow it live
       if (d.current_q !== undefined) card.current_q = d.current_q;
       if (d.current_q_since !== undefined) card.current_q_since = d.current_q_since;
@@ -530,6 +545,7 @@
   es.addEventListener("rank", function (ev) {
     var d;
     try { d = frameData(ev); } catch (e) { return; }
+    if (!state.rankingLive) return; // ranking off — frames must not render
     if (d && Array.isArray(d.ranking)) {
       state.ranking = d.ranking;
       renderRank();

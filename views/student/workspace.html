@@ -66,7 +66,7 @@
   </div>
 
   <div class="d-flex gap-2 flex-wrap align-items-center" id="ws-pager">
-    <button type="button" id="btn-prev" class="btn btn-outline-secondary{{if le $.Current 1}} disabled{{end}}"{{if $.Linear}} hidden{{end}}{{if le $.Current 1}} disabled{{end}} title="Sebelumnya" aria-label="Sebelumnya" data-bs-toggle="tooltip"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+    <button type="button" id="btn-prev" class="btn btn-outline-secondary{{if le $.Current 1}} disabled{{end}}"{{if or $.Linear $.PerQ}} hidden{{end}}{{if le $.Current 1}} disabled{{end}} title="Sebelumnya" aria-label="Sebelumnya" data-bs-toggle="tooltip"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
     <button type="button" id="btn-next" class="btn btn-outline-secondary{{if ge $.Current $.Total}} disabled{{end}}"{{if $.Linear}} hidden{{end}}{{if ge $.Current $.Total}} disabled{{end}} title="Berikutnya" aria-label="Berikutnya" data-bs-toggle="tooltip"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
   </div>
 
@@ -99,9 +99,9 @@
 
   {{else if eq .State "finished"}}
   <div class="card p-4 text-center">
-    <h2 class="h5">Percobaan selesai</h2>
+    <h2 class="h5">Kuis selesai</h2>
     {{if .NotAttempted}}
-    <p class="text-body-secondary mb-0">Anda tidak mengirim percobaan ini sebelum kuis ditutup.</p>
+    <p class="text-body-secondary mb-0">Anda tidak mengirim kuis ini sebelum ditutup.</p>
     {{else}}
       {{if .Pending}}<p class="text-body-secondary mb-0">Menunggu guru Anda menilai pertanyaan esai.</p>{{end}}
       {{if .ShowScore}}
@@ -110,7 +110,6 @@
       {{else}}
       <p class="text-body-secondary mb-0">Nilai akhir tidak ditampilkan untuk kuis ini.</p>
       {{end}}
-      {{if .Cheating}}<p class="text-danger small mb-0">Guru Anda menandai percobaan ini karena Anda meninggalkan jendela kuis.</p>{{end}}
     {{end}}
     <a class="btn btn-outline-secondary mt-3" href="/student"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>Kembali ke dasbor</a>
   </div>
@@ -130,11 +129,27 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
       </div>
       <div class="modal-body">
-        <p>Guru Anda menandai percobaan ini sebagai kecurangan dari pemantauan langsung.</p>
-        <p class="mb-0">Tanda ini tercatat pada percobaan Anda dan guru Anda melihatnya di hasil. Tanda ini tidak mengunci Anda &mdash; Anda dapat terus mengerjakan kuis.</p>
+        <p>Guru Anda menandai kuis &ldquo;{{.Judul}}&rdquo; sebagai kecurangan dari pemantauan langsung.</p>
+        <p class="mb-0">Tanda ini tercatat pada kuis &ldquo;{{.Judul}}&rdquo; dan guru Anda melihatnya di hasil. Tanda ini tidak mengunci Anda &mdash; Anda dapat terus mengerjakan kuis.</p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-primary" data-bs-dismiss="modal"><i class="bi bi-check-lg me-1" aria-hidden="true"></i>Lanjutkan kuis</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Per-question timer expiry (spec C9): shown once when the current
+     question's budget runs out on an unanswered question, hidden again as
+     soon as the next question renders — shown through bootstrap.Modal. -->
+<div class="modal fade" id="timeup-modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="timeup-modal-title" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5" id="timeup-modal-title">Waktu habis</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">Waktu untuk mengerjakan pertanyaan ini habis. Halaman akan berpindah ke pertanyaan berikutnya.</p>
       </div>
     </div>
   </div>

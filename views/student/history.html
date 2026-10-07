@@ -37,7 +37,7 @@
           <td>
             {{if .Removed}}<span class="badge text-bg-danger">dikeluarkan</span>
             {{else if .Cheating}}<span class="badge text-bg-warning">ditandai</span>
-            {{else}}{{.Status}}{{end}}
+            {{else}}{{.StatusLabel}}{{end}}
           </td>
           {{if $.ShowScoreColumn}}
           <td class="text-end">{{if .ShowScore}}{{if .Score.Valid}}{{printf "%.2f" .Score.Float64}}{{else}}&mdash;{{end}}{{else}}&mdash;{{end}}</td>
@@ -83,7 +83,7 @@
       <div>
         {{if .Removed}}<span class="badge text-bg-danger">dikeluarkan</span>
         {{else if .Cheating}}<span class="badge text-bg-warning">ditandai</span>
-        {{else}}{{.Status}}{{end}}
+        {{else}}{{.StatusLabel}}{{end}}
       </div>
     </div>
   </div>

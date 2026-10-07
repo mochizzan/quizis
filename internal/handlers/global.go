@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"strconv"
 	"sync"
@@ -75,6 +76,8 @@ type monitorCard struct {
 	Name          string   `json:"name"`
 	AttemptNo     uint8    `json:"attempt_no"`
 	Status        string   `json:"status"`
+	StatusLabel   string   `json:"status_label"`
+	TimerLabel    string   `json:"timer_label"`
 	CurrentQ      int      `json:"current_q"`
 	CurrentQSince int64    `json:"current_q_since"` // unix, 0 = none
 	EndsAt        int64    `json:"ends_at"`         // unix, 0 = none
@@ -90,7 +93,12 @@ type monitorCard struct {
 	Page          string   `json:"page"`                // ""/"question"/"preview"
 	Spent         []SpentQ `json:"spent"`               // per-question seconds
 	ScoreText     string   `json:"-"`                   // display-only "%.2f"
-	AnswerText    string   `json:"-"`                   // display-only form of Answer (SSR)
+	AnswerText    string   `json:"answer_display"`      // display-only form of Answer (SSR + JS)
+	AnswerTeks    string   `json:"answer_q_teks"`       // text of AnswerQ's question
+	CurrentQTeks  string   `json:"current_q_teks"`      // text of the current question (qorder)
+	// qorder is this murid's stored order: it drives the answer display,
+	// the answer position and the current-question text. Never serialized.
+	qorder sql.NullString
 }
 
 // monitorData is the one builder behind the SSR monitor page and the
@@ -98,18 +106,19 @@ type monitorCard struct {
 // waiting-room count and the live ranking (spec §6.3, §7).
 func monitorData(ctx context.Context, db *sql.DB, live *Live, quizID uint64) (map[string]any, error) {
 	var judul, code, status, timerType string
-	var timerOn int
+	var timerOn, rankingOn int
 	var startedAt sql.NullTime
 	var totalSeconds int
 	err := db.QueryRowContext(ctx, `SELECT judul, code, status, timer_type, timer_on,
-		started_at, total_seconds FROM quizzes WHERE id = ?`, quizID).
-		Scan(&judul, &code, &status, &timerType, &timerOn, &startedAt, &totalSeconds)
+		started_at, total_seconds, ranking_live FROM quizzes WHERE id = ?`, quizID).
+		Scan(&judul, &code, &status, &timerType, &timerOn, &startedAt, &totalSeconds, &rankingOn)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
+	rankingLive := rankingOn != 0
 
 	// Active tracking rows only: a submitted attempt (status 'selesai')
 	// leaves the cards the moment it finishes — the monitor covers every
@@ -117,7 +126,7 @@ func monitorData(ctx context.Context, db *sql.DB, live *Live, quizID uint64) (ma
 	// rows stay, the ranking keeps the finished scores.
 	rows, err := db.QueryContext(ctx, `SELECT p.id, p.user_id, u.nama_lengkap, p.attempt_no,
 		p.status, p.current_q, p.current_q_since, p.ends_at, p.finished_at,
-		p.score_auto, p.final_score, p.cheating
+		p.score_auto, p.final_score, p.cheating, p.qorder
 		FROM participants p JOIN users u ON u.id = p.user_id
 		WHERE p.quiz_id = ? AND p.status <> 'selesai' AND (p.user_id, p.attempt_no) IN
 		  (SELECT user_id, MAX(attempt_no) FROM participants WHERE quiz_id = ? GROUP BY user_id)
@@ -133,7 +142,8 @@ func monitorData(ctx context.Context, db *sql.DB, live *Live, quizID uint64) (ma
 		var curSince, ends, finished sql.NullTime
 		var score, final sql.NullFloat64
 		if err := rows.Scan(&c.ParticipantID, &c.UserID, &c.Name, &c.AttemptNo,
-			&c.Status, &curQ, &curSince, &ends, &finished, &score, &final, &c.Cheating); err != nil {
+			&c.Status, &curQ, &curSince, &ends, &finished, &score, &final, &c.Cheating,
+			&c.qorder); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -161,6 +171,8 @@ func monitorData(ctx context.Context, db *sql.DB, live *Live, quizID uint64) (ma
 		if c.Status == "pending" {
 			pending++
 		}
+		c.StatusLabel = participantStatusLabel(c.Status)
+		c.TimerLabel = quizTimerLabel(timerType)
 		c.Connected = live.Connected(c.ParticipantID)
 		c.Page = live.Page(c.ParticipantID)
 		c.Spent = live.Spent(c.ParticipantID)
@@ -170,6 +182,17 @@ func monitorData(ctx context.Context, db *sql.DB, live *Live, quizID uint64) (ma
 		return nil, err
 	}
 
+	// question texts for the current-question header — loaded once for all
+	// cards (spec §6.3: the monitor mirrors the murid's own qorder view)
+	questions, err := loadQuestions(ctx, db, quizID)
+	if err != nil {
+		return nil, err
+	}
+	questionTexts := make(map[uint64]string, len(questions))
+	for _, q := range questions {
+		questionTexts[q.ID] = q.Teks
+	}
+
 	// per-card extras: violation count and the most recent submitted answer
 	for i := range cards {
 		if err := db.QueryRowContext(ctx,
@@ -177,24 +200,32 @@ func monitorData(ctx context.Context, db *sql.DB, live *Live, quizID uint64) (ma
 			cards[i].ParticipantID).Scan(&cards[i].Violations); err != nil {
 			return nil, err
 		}
-		var ans sql.NullString
-		var qorder sql.NullString
+		var ans, qteks sql.NullString
 		err := db.QueryRowContext(ctx,
-			`SELECT a.question_id, a.answer, p.qorder FROM answers a
-			 JOIN participants p ON p.id = a.participant_id
+			`SELECT a.question_id, a.answer, q.teks FROM answers a
+			 LEFT JOIN questions q ON q.id = a.question_id
 			 WHERE a.participant_id = ?
 			 ORDER BY a.answered_at DESC, a.id DESC LIMIT 1`, cards[i].ParticipantID).
-			Scan(&cards[i].AnswerQ, &ans, &qorder)
+			Scan(&cards[i].AnswerQ, &ans, &qteks)
 		if errors.Is(err, sql.ErrNoRows) {
 			cards[i].AnswerQ = 0
 		} else if err != nil {
 			return nil, err
 		} else {
 			cards[i].Answer = ans.String
-			cards[i].AnswerText = answerDisplay(ans.String)
+			cards[i].AnswerTeks = qteks.String
+			cards[i].AnswerText = answerDisplay(ans.String, cards[i].qorder, cards[i].AnswerQ)
 			// the answer is attributed to ITS question (qorder position),
 			// never to the card's current question (spec §6.3)
-			cards[i].AnswerQPos = answerPos(qorder, cards[i].AnswerQ)
+			cards[i].AnswerQPos = answerPos(cards[i].qorder, cards[i].AnswerQ)
+		}
+		// current-question text: only a started attempt with a decodable
+		// qorder and a current_q inside that order has one ("" otherwise)
+		if cards[i].Status == "started" {
+			if order := decodeOrder(cards[i].qorder); order != nil &&
+				cards[i].CurrentQ >= 1 && cards[i].CurrentQ <= len(order.Questions) {
+				cards[i].CurrentQTeks = questionTexts[order.Questions[cards[i].CurrentQ-1]]
+			}
 		}
 	}
 
@@ -202,13 +233,19 @@ func monitorData(ctx context.Context, db *sql.DB, live *Live, quizID uint64) (ma
 	if timerOn != 0 && startedAt.Valid && status == "berjalan" {
 		endsUnix = quizengine.GlobalEndsAt(startedAt.Time, totalSeconds).Unix()
 	}
-	ranking := live.Ranker(quizID).Snapshot()
+	// ranking_live gates SSR, snapshot blob and JS alike (spec §6.7.3):
+	// when off, no snapshot is taken and both surfaces render nothing
+	ranking := []quizengine.Entry{}
+	if rankingLive {
+		ranking = live.Ranker(quizID).Snapshot()
+	}
 
 	blob, err := json.Marshal(map[string]any{
 		"quiz_id": quizID, "code": code, "status": status,
-		"timer_type": timerType, "timer_on": timerOn != 0,
+		"timer_type": timerType, "timer_label": quizTimerLabel(timerType), "timer_on": timerOn != 0,
 		"total_seconds": totalSeconds, "ends_at": endsUnix,
 		"server_now": time.Now().Unix(), "pending": pending,
+		"ranking_live": rankingLive,
 		"participants": cards, "ranking": ranking,
 	})
 	if err != nil {
@@ -218,13 +255,16 @@ func monitorData(ctx context.Context, db *sql.DB, live *Live, quizID uint64) (ma
 	if startedAt.Valid {
 		startedUnix = startedAt.Time.Unix()
 	}
+	chipLabel, _ := quizChip(status)
 	return map[string]any{
 		"Title":        "Pemantauan — " + judul,
 		"ID":           quizID,
 		"Judul":        judul,
 		"Code":         code,
 		"Status":       status,
+		"StatusLabel":  chipLabel,
 		"TimerType":    timerType,
+		"TimerLabel":   quizTimerLabel(timerType),
 		"TimerOn":      timerOn != 0,
 		"StartedAt":    startedUnix,
 		"TotalSeconds": totalSeconds,
@@ -233,6 +273,7 @@ func monitorData(ctx context.Context, db *sql.DB, live *Live, quizID uint64) (ma
 		"Pending":      pending,
 		"Cards":        cards,
 		"Ranking":      ranking,
+		"RankingLive":  rankingLive,
 		"StreamURL":    fmt.Sprintf("/teacher/quiz/%d/monitor/stream", quizID),
 		"MonitorData":  template.JS(blob),
 	}, nil
@@ -255,41 +296,20 @@ func answerPos(qorder sql.NullString, questionID uint64) int {
 	return 0
 }
 
-// answerDisplay mirrors monitor.js fmtAnswer for the server-rendered answer
-// line: stored option indexes become letters, JSON strings are unquoted and
-// truncated — the SSR card and the live JS card must read identically.
-func answerDisplay(raw string) string {
-	if len(raw) > 0 && raw[0] == '[' {
-		var idx []int
-		if err := json.Unmarshal([]byte(raw), &idx); err != nil {
-			return raw
-		}
-		out := ""
-		for i, n := range idx {
-			if i > 0 {
-				out += ", "
-			}
-			out += string(rune('A' + n))
-		}
-		return out
-	}
-	var text string
-	if err := json.Unmarshal([]byte(raw), &text); err != nil {
-		return raw
-	}
-	runes := []rune(text)
-	if len(runes) > 60 {
-		return string(runes[:57]) + "…"
-	}
-	return text
-}
-
 // monitorSnapshot is the per-connection greeting on the teacher topic: the
 // whole monitor state for exactly this client (spec §6.3).
 func monitorSnapshot(ctx context.Context, db *sql.DB, live *Live, quizID uint64) *realtime.Event {
 	data, err := monitorData(ctx, db, live, quizID)
-	if err != nil || data == nil {
-		return nil
+	if err != nil {
+		// a client hanging up mid-build is not an error; a real
+		// monitorData failure must not vanish silently
+		if !errors.Is(err, context.Canceled) {
+			log.Printf("monitor snapshot: quiz %d: %v", quizID, err)
+		}
+		return nil // greeting skipped
+	}
+	if data == nil {
+		return nil // quiz gone — no greeting (the page 404s the same way)
 	}
 	return &realtime.Event{Type: "snapshot", Data: data}
 }

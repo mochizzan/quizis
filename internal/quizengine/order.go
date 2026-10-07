@@ -2,6 +2,7 @@ package quizengine
 
 import (
 	"math/rand/v2"
+	"strings"
 )
 
 // Order is the per-participant shuffle snapshot persisted as the
@@ -27,8 +28,8 @@ func SeedFor(participantID, quizID uint64, attemptNo uint64) int64 {
 // permutation for every question (spec §6.7: sequential chosen forces
 // shuffle options off — the caller passes false).
 func BuildOrder(seed int64, questionIDs []uint64, optionCounts map[uint64]int,
-	shuffleQuestions, shuffleOptions bool) Order {
-
+	shuffleQuestions, shuffleOptions bool,
+) Order {
 	rng := rand.New(rand.NewPCG(uint64(seed), uint64(seed)>>32))
 
 	questions := make([]uint64, len(questionIDs))
@@ -70,4 +71,27 @@ func LetterOf(perm []int, originalIndex int) int {
 		}
 	}
 	return -1
+}
+
+// DisplayLetters maps stored ORIGINAL option indexes to the display letters
+// this attempt actually saw, following the qorder option permutation.
+// separator ", "; nil order or missing perm entry → treat as identity
+// ('A'+original). Never panics; never empty for non-empty input.
+func DisplayLetters(o *Order, qid uint64, stored []int) string {
+	if len(stored) == 0 {
+		return ""
+	}
+	var perm []int
+	if o != nil {
+		perm = o.Options[qid]
+	}
+	out := make([]string, 0, len(stored))
+	for _, original := range stored {
+		pos := LetterOf(perm, original)
+		if pos < 0 {
+			pos = original // identity fallback (nil order / missing entry)
+		}
+		out = append(out, string(rune('A'+pos)))
+	}
+	return strings.Join(out, ", ")
 }

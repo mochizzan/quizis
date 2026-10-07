@@ -180,36 +180,50 @@ func (l *Live) Disconnect(pid uint64, lastSent time.Time) {
 // has been silent for longer than threshold: ends_at is pinned to the LAST
 // HEARTBEAT instant (never the detection time — spec §11.16) and the unused
 // remainder is kept for the reconnect resume. Participants with no clock
-// (timer off) or that are not working are left alone. The map lock is held
-// across the few queries so a concurrent Connect cannot interleave.
+// (timer off) or that are not working are left alone. Snapshot-then-commit:
+// the map lock is held only to snapshot candidates and to commit flags, so a
+// concurrent Connect cannot block on (or interleave with) the DB queries.
 // Returns the pids it froze.
 func (l *Live) SweepDisconnects(ctx context.Context, now time.Time, threshold time.Duration) []uint64 {
+	type candidate struct {
+		pid  uint64
+		last time.Time
+	}
 	l.mu.Lock()
-	defer l.mu.Unlock()
-	var frozen []uint64
+	var cands []candidate
 	for pid, b := range l.beats {
 		if b.connected || b.frozen || now.Sub(b.last) <= threshold {
 			continue
 		}
+		cands = append(cands, candidate{pid: pid, last: b.last})
+	}
+	l.mu.Unlock()
+	var frozen []uint64
+	for _, c := range cands {
 		var endsAt sql.NullTime
 		err := l.DB.QueryRowContext(ctx,
-			`SELECT ends_at FROM participants WHERE id = ? AND status = 'started'`, pid).
+			`SELECT ends_at FROM participants WHERE id = ? AND status = 'started'`, c.pid).
 			Scan(&endsAt)
 		if errors.Is(err, sql.ErrNoRows) || !endsAt.Valid {
 			continue // not working, or no personal clock to freeze
 		}
-		remain := endsAt.Time.Sub(b.last)
+		remain := endsAt.Time.Sub(c.last)
 		if remain < 0 {
 			remain = 0
 		}
 		if _, err := l.DB.ExecContext(ctx,
 			`UPDATE participants SET ends_at = ? WHERE id = ? AND status = 'started'`,
-			b.last.UTC().Format("2006-01-02 15:04:05"), pid); err != nil {
+			c.last.UTC().Format("2006-01-02 15:04:05"), c.pid); err != nil {
 			continue
 		}
-		b.frozen = true
-		b.remain = remain
-		frozen = append(frozen, pid)
+		l.mu.Lock()
+		b := l.beats[c.pid]
+		if b != nil && !b.connected && !b.frozen && b.last.Equal(c.last) {
+			b.frozen = true
+			b.remain = remain
+			frozen = append(frozen, c.pid)
+		}
+		l.mu.Unlock()
 	}
 	return frozen
 }

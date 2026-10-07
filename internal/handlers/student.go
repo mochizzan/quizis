@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -281,12 +282,28 @@ func (s *Student) joinQuiz(ctx context.Context, quiz quizDetail, userID uint64) 
 				return part, false, nil, nil
 			}
 		}
-		// no row: quiz-status gates, then create attempt 1
-		if rerr := quizGates(quiz); rerr != nil {
+		// no row: re-read quiz gates under lock, then create attempt 1
+		var freshStatus, freshJoinMode, freshTimerType string
+		var freshMaxAttempts int
+		if err := tx.QueryRowContext(ctx,
+			`SELECT status, join_mode, max_attempts, timer_type FROM quizzes WHERE id = ? FOR UPDATE`,
+			quiz.ID).Scan(&freshStatus, &freshJoinMode, &freshMaxAttempts, &freshTimerType); err != nil {
+			tx.Rollback()
+			if errors.Is(err, sql.ErrNoRows) {
+				return attemptRow{}, false, errResp(http.StatusNotFound, ErrNotFound, "Kuis tidak ditemukan."), nil
+			}
+			return attemptRow{}, false, nil, err
+		}
+		quizFresh := quiz
+		quizFresh.Status = freshStatus
+		quizFresh.JoinMode = freshJoinMode
+		quizFresh.MaxAttempts = uint8(freshMaxAttempts)
+		quizFresh.TimerType = freshTimerType
+		if rerr := quizGates(quizFresh); rerr != nil {
 			tx.Rollback()
 			return attemptRow{}, false, rerr, nil
 		}
-		if err := s.createAttempt(ctx, tx, quiz, userID, 1); err != nil {
+		if err := s.createAttempt(ctx, tx, quizFresh, userID, 1); err != nil {
 			tx.Rollback()
 			if isDuplicateKey(err) && attempt < 2 {
 				continue
@@ -624,24 +641,26 @@ type rankView struct {
 
 // wsBlob is embedded as JSON for workspace.js (spec §6.7 client flow).
 type wsBlob struct {
-	QuizID           uint64       `json:"quiz_id"`
-	ParticipantID    uint64       `json:"participant_id"` // this murid's row — lets the quiz-wide SSE frames tell "about me" from "about a classmate"
-	Code             string       `json:"code"`
-	State            string       `json:"state"`
-	Linear           bool         `json:"linear"`
-	TimerOn          bool         `json:"timer_on"`
-	EndsAt           int64        `json:"ends_at"` // unix seconds, 0 = none
-	ServerNow        int64        `json:"server_now"`
-	Current          int          `json:"current"` // 1-based
-	Total            int          `json:"total"`
-	ShowCorrectWrong bool         `json:"show_correct_wrong"`
-	RankingLive      bool         `json:"ranking_live"`
-	AnswerURL        string       `json:"answer_url"`
-	NextURL          string       `json:"next_url"`
-	FinishURL        string       `json:"finish_url"`
-	PageURL          string       `json:"page_url"`
-	StreamURL        string       `json:"stream_url"`
-	Questions        []wsQuestion `json:"questions"`
+	QuizID             uint64       `json:"quiz_id"`
+	ParticipantID      uint64       `json:"participant_id"` // this murid's row — lets the quiz-wide SSE frames tell "about me" from "about a classmate"
+	Code               string       `json:"code"`
+	State              string       `json:"state"`
+	Linear             bool         `json:"linear"`
+	TimerOn            bool         `json:"timer_on"`
+	EndsAt             int64        `json:"ends_at"`              // unix seconds, 0 = none
+	PerQuestionSeconds int          `json:"per_question_seconds"` // quiz.PerQuestionSeconds (0 for tanpa_timer)
+	QSince             int64        `json:"q_since"`              // part.CurrentQSince unix, 0 = none
+	ServerNow          int64        `json:"server_now"`
+	Current            int          `json:"current"` // 1-based
+	Total              int          `json:"total"`
+	ShowCorrectWrong   bool         `json:"show_correct_wrong"`
+	RankingLive        bool         `json:"ranking_live"`
+	AnswerURL          string       `json:"answer_url"`
+	NextURL            string       `json:"next_url"`
+	FinishURL          string       `json:"finish_url"`
+	PageURL            string       `json:"page_url"`
+	StreamURL          string       `json:"stream_url"`
+	Questions          []wsQuestion `json:"questions"`
 }
 
 type bankQuestion struct {
@@ -685,6 +704,7 @@ func decodeOrder(ns sql.NullString) *quizengine.Order {
 	}
 	var o quizengine.Order
 	if err := json.Unmarshal([]byte(ns.String), &o); err != nil {
+		log.Printf("qorder: corrupt json (participant attempt row): %v", err)
 		return nil
 	}
 	return &o
@@ -823,25 +843,33 @@ func (s *Student) renderStarted(c *echo.Context, quiz quizDetail, part attemptRo
 		}
 	}
 
+	// per-question clock anchor: when the current question was opened
+	var qSince int64
+	if part.CurrentQSince.Valid {
+		qSince = part.CurrentQSince.Time.Unix()
+	}
+
 	blob := wsBlob{
-		QuizID:           quiz.ID,
-		ParticipantID:    part.ID,
-		Code:             quiz.Code,
-		State:            "started",
-		Linear:           linear,
-		TimerOn:          endsUnix > 0,
-		EndsAt:           endsUnix,
-		ServerNow:        time.Now().Unix(),
-		Current:          current,
-		Total:            len(ids),
-		ShowCorrectWrong: quiz.ShowCorrectWrong,
-		RankingLive:      quiz.RankingLive,
-		AnswerURL:        "/quiz/" + quiz.Code + "/answer",
-		NextURL:          "/quiz/" + quiz.Code + "/next",
-		FinishURL:        "/quiz/" + quiz.Code + "/finish",
-		PageURL:          "/quiz/" + quiz.Code + "/page",
-		StreamURL:        "/quiz/" + quiz.Code + "/stream",
-		Questions:        wsQuestions,
+		QuizID:             quiz.ID,
+		ParticipantID:      part.ID,
+		Code:               quiz.Code,
+		State:              "started",
+		Linear:             linear,
+		TimerOn:            endsUnix > 0,
+		EndsAt:             endsUnix,
+		PerQuestionSeconds: quiz.PerQuestionSecs,
+		QSince:             qSince,
+		ServerNow:          time.Now().Unix(),
+		Current:            current,
+		Total:              len(ids),
+		ShowCorrectWrong:   quiz.ShowCorrectWrong,
+		RankingLive:        quiz.RankingLive,
+		AnswerURL:          "/quiz/" + quiz.Code + "/answer",
+		NextURL:            "/quiz/" + quiz.Code + "/next",
+		FinishURL:          "/quiz/" + quiz.Code + "/finish",
+		PageURL:            "/quiz/" + quiz.Code + "/page",
+		StreamURL:          "/quiz/" + quiz.Code + "/stream",
+		Questions:          wsQuestions,
 	}
 	blobJSON, err := json.Marshal(blob)
 	if err != nil {
@@ -850,6 +878,7 @@ func (s *Student) renderStarted(c *echo.Context, quiz quizDetail, part attemptRo
 
 	data["State"] = "started"
 	data["Linear"] = linear
+	data["PerQ"] = quiz.TimerType == "per_soal"
 	data["TimerOn"] = endsUnix > 0
 	data["TimerEndsAt"] = endsUnix
 	data["ServerNow"] = time.Now().Unix()
@@ -1093,10 +1122,11 @@ func (s *Student) SubmitAnswer(c *echo.Context) error {
 	var qType string
 	var correct sql.NullString
 	var optCount sql.NullInt64
-	if err := tx.QueryRowContext(ctx, `SELECT q.type, q.correct, JSON_LENGTH(q.options)
+	var qTeks string
+	if err := tx.QueryRowContext(ctx, `SELECT q.type, q.correct, JSON_LENGTH(q.options), q.teks
 		FROM quiz_questions qq JOIN questions q ON q.id = qq.question_id
 		WHERE qq.quiz_id = ? AND qq.question_id = ?`, quiz.ID, body.QuestionID).
-		Scan(&qType, &correct, &optCount); errors.Is(err, sql.ErrNoRows) {
+		Scan(&qType, &correct, &optCount, &qTeks); errors.Is(err, sql.ErrNoRows) {
 		tx.Rollback()
 		return fail(c, http.StatusNotFound, ErrNotFound, "Pertanyaan tidak ditemukan.")
 	} else if err != nil {
@@ -1177,6 +1207,8 @@ func (s *Student) SubmitAnswer(c *echo.Context) error {
 			// to THIS question even after current_q moved on (spec §6.3)
 			"question_pos":    answerPos(part.QOrder, body.QuestionID),
 			"answer":          json.RawMessage(stored),
+			"answer_display":  answerDisplay(stored, part.QOrder, body.QuestionID),
+			"q_teks":          qTeks,
 			"is_correct":      isCorrect,
 			"current_q":       part.CurrentQ.Int64,
 			"current_q_since": time.Now().Unix(),
@@ -1335,6 +1367,14 @@ func (s *Student) NextQuestion(c *echo.Context) error {
 	if target > len(order.Questions) {
 		target = len(order.Questions)
 	}
+	// per_soal is forward-only: the per-question clock pins the murid to the
+	// current question — reopening an earlier one would reset its countdown
+	// (spec §6.7 / design C7). tanpa_timer keeps full free navigation.
+	if quiz.TimerType == "per_soal" && target < pos {
+		tx.Rollback()
+		return fail(c, http.StatusConflict, ErrConflict,
+			"Pertanyaan sebelumnya tidak dapat dibuka kembali.")
+	}
 
 	// preview for the question being LEFT (the one just answered/skipped)
 	var preview any
@@ -1388,9 +1428,10 @@ func (s *Student) NextQuestion(c *echo.Context) error {
 	s.publishPage(quiz.ID, part, name, "question")
 
 	return ok(c, map[string]any{
-		"preview":   preview,
-		"current_q": target,
-		"total":     len(order.Questions),
+		"preview":         preview,
+		"current_q":       target,
+		"total":           len(order.Questions),
+		"current_q_since": part.CurrentQSince.Time.Unix(),
 	})
 }
 

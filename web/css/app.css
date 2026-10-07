@@ -5,6 +5,11 @@
 
 /* --- shared bits ------------------------------------------------------- */
 
+/* the hidden attribute must beat Bootstrap's display utilities (d-flex …),
+   which ship !important and otherwise defeat the UA rule — e.g. #ws-pager
+   staying visible over the pre-submit preview (C8) */
+[hidden] { display: none !important; }
+
 .brand-mark {
   width: 2rem;
   height: 2rem;

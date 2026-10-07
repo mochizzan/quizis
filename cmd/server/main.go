@@ -49,7 +49,7 @@ func run() error {
 	// mount calls below, the ?v= fingerprint registry and the cache
 	// middleware all derive from it, so the prefix lists cannot drift apart.
 	staticMounts := []mw.StaticMount{
-		{Path: "/assets", FS: echo.MustSubFS(web.FS, "vendor")}, // vendor/ → /assets (theme.css, bootstrap-icons/)
+		{Path: "/assets", FS: echo.MustSubFS(web.FS, "vendor")}, // vendor/ → /assets (theme.css, bootstrap-icons/, chartjs/ Chart.js v4.5.1 MIT vendored)
 		{Path: "/css", FS: echo.MustSubFS(web.FS, "css")},       // css/ → /css (app.css)
 		{Path: "/js", FS: echo.MustSubFS(web.FS, "js")},         // js/ → /js (ui.js, teacher.js, …)
 		{Path: "/bootstrap", FS: bootstrap.FS},                  // bootstrap/ → /bootstrap (offline 5.3, no CDN/npm)

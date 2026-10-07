@@ -15,7 +15,7 @@ Build a Quizizz-like quiz web application for schools with two roles:
 
 **Success** = all criteria in §11 pass with `go test ./... -race -count=1` green and `docker compose up --build` running an identical local/production environment.
 
-**UI language:** full **bahasa Indonesia baku (KBBI)** — URL paths, code identifiers, schema literals, and third-party/tool names stay in their original form.
+**UI language:** antarmuka pengguna memakai **bahasa Indonesia baku (KBBI)** untuk teks yang dirender — label status dan tipe timer dipetakan terpusat (`pending→Menunggu persetujuan`, `registered→Terdaftar`, `started→Berlangsung`, `selesai→Selesai`, `dikeluarkan→Dikeluarkan`; `global→Global`, `tanpa_timer→Tanpa timer`, selain itu `Per pertanyaan`; dikunci `tests/integration/i18n_labels_test.go`). URL paths, code identifiers, schema literals, and third-party/tool names stay in their original form (kode dan identifier tetap Inggris — bukan bagian dari klaim bahasa).
 **UI style:** minimalist, custom **blue palette** (no default Bootstrap colors), light/dark mode, modern corner radius, responsive; hand-written CSS limited to the layout chrome in `web/css/app.css`; body font **Noto Sans Cypro Minoan** 400 via Google Fonts — the sanctioned CDN exception (§2); Latin text falls back to `sans-serif`.
 
 ---
@@ -33,17 +33,18 @@ Build a Quizizz-like quiz web application for schools with two roles:
 | Realtime (client) | native `EventSource` | no WebSocket library |
 | **SSE server** | **`github.com/tmaxmax/go-sse`** (latest, active) | broker `Publish` per topic = per-quiz room (two topics per quiz: `quiz:<id>` + `quiz:<id>:teacher`); hub built on `Upgrade` + `Joe` with a slow-client guard (§6.1), server-only. Rejected: `r3labs/sse` (unmaintained since Jan 2023), `joshuafuller/sse/v3` (new fork, 0 importers — too risky) |
 | **.env loader** | **`github.com/ilyakaznacheev/cleanenv`** v0.5.0+ | parse `.env` + struct-tag mapping + **fail-fast required-field validation at boot**; for any key **present** in `.env`, the file value wins (cleanenv `parseENV` writes it into OS env unconditionally). Keys **absent** from `.env` — specifically `DB_HOST` — resolve from OS env or `env-default`. **The file is optional:** the image never contains `.env` (`.dockerignore`), so containers resolve purely from OS env injected at run time by compose `env_file` (host `.env.example` first, then `.env` — later wins; the `environment:` section outranks both). Each host's own `.env` is applied at run time and never baked into the pushed image; a clean machine without a `.env` boots on the injected `.env.example` (§11.19). Rejected: `godotenv` (OS-set only, needs hand-written mapping), Viper (heavyweight) |
-| **CSV export** | **`github.com/gocarina/gocsv`** (latest, active Sep 2026) | struct → CSV via `csv:"..."` tags |
+| **CSV export** | stdlib `encoding/csv` (`internal/handlers/export.go`) | header + rows, `'`-prefix injection guard; no third-party CSV module |
+| **Chart.js (vendored runtime JS)** | **v4.5.1 MIT**, file `web/vendor/chartjs/chart.umd.min.js`, served at `/assets`, used by `views/teacher/dashboard.html` + `web/js/teacher_dashboard.js` (`new Chart(…)`) | dasbor charts render via Chart.js canvas (not identical images); vuln-watch: pin version here, review on upgrade via `govulncheck`-style manual check since Go scanners do not cover vendored JS |
 | **XLSX export** | **`github.com/xuri/excelize/v2` ≥ v2.11.0 (MANDATORY)** | ⚠️ CVE-2026-59162 / GO-2026-6452 fixed in **v2.11.0**; **≤v2.10.1 is vulnerable** (panic on negative shared-string index). Pure Go, streaming writer for large sheets |
 | QR | `skip2/go-qrcode` (latest) | generates join-URL PNG |
 | Password hash | `golang.org/x/crypto/bcrypt` **≥ v0.55.0** | v0.55.0 (Aug 2026) includes CVE-2026-39833 fix |
 | DB driver | `github.com/go-sql-driver/mysql` **v1.10.0** (Aug 2026) | pure Go, no cgo |
 | Docker | 29.4.3 / Compose v5.1.3 | multi-stage: `golang:1.26.6-alpine` → `alpine:3.24` |
 
-**Closed dependency list** — exactly 8 **direct** modules (cleanenv additionally pulls `godotenv`, `toml`, `yaml.v3`, `edn` transitively — not counted):
-`labstack/echo/v5` · `go-sql-driver/mysql` · `golang.org/x/crypto` · `skip2/go-qrcode` · `tmaxmax/go-sse` · `ilyakaznacheev/cleanenv` · `gocarina/gocsv` · `xuri/excelize/v2`
+**Closed dependency list** — exactly 7 **direct** Go modules per `go mod tidy` (cleanenv additionally pulls `godotenv`, `toml`, `yaml.v3`, `edn` transitively — not counted):
+`labstack/echo/v5` · `go-sql-driver/mysql` · `golang.org/x/crypto` · `skip2/go-qrcode` · `tmaxmax/go-sse` · `ilyakaznacheev/cleanenv` · `xuri/excelize/v2` (no `gocsv` role — CSV uses stdlib `encoding/csv`). Plus one vendored runtime JS asset outside `go.mod`: Chart.js v4.5.1 MIT (`web/vendor/chartjs/`, §4).
 
-**Dependency list is closed** — adding any dependency requires asking first (§10). Minimum versions above are security floors: `go.mod` must pin ≥ those versions and `govulncheck ./...` must report no known vulnerabilities before release.
+**Dependency list is closed** — adding any dependency requires asking first (§10). Minimum versions above are security floors: `go.mod` must pin ≥ those versions and `govulncheck ./...` must report no known vulnerabilities before release (Go scanner scope only — vendored Chart.js is version-pinned here and reviewed manually on upgrade).
 
 ---
 
@@ -92,12 +93,13 @@ quiz/
 ├── views/                      # html/template: layout/, teacher/, student/, auth/,
 │                               #   landing.html, join.html, about.html
 ├── web/
-│   ├── css/                    # app.css: landing page + sidebar dashboard shell layout
+│   ├── css/                    # app.css: landing page + sidebar dasbor shell layout
 │   │                           #   (Bootstrap tokens/palette still come from theme.css)
 │   ├── js/                     # native JS only: ui.js (Toast/Modal/flash), teacher.js,
 │   │                           #   workspace.js, monitor.js, anti-cheat.js, theme.js
-│   └── vendor/                 # served at /assets (bootstrap-icons/, theme.css)
+│   └── vendor/                 # served at /assets (bootstrap-icons/, theme.css, chartjs/ Chart.js v4.5.1 MIT vendored)
 │       ├── bootstrap-icons/    # Bootstrap Icons (offline)
+│       ├── chartjs/            # Chart.js v4.5.1 MIT vendored (`chart.umd.min.js`) — dasbor charts runtime (§2); pin version, review manually on upgrade
 │       └── theme.css           # blue palette via --bs-* overrides ONLY
 ├── migrations/                 # 0001_*.sql … 0005_*.sql (numbered, embedded)
 ├── tests/
@@ -131,6 +133,7 @@ users        id INT UNSIGNED AUTO_INCREMENT PK,
              kelas_id SMALLINT UNSIGNED NOT NULL,
              jurusan_id SMALLINT UNSIGNED NOT NULL,
              must_change_pw TINYINT(1) NOT NULL DEFAULT 0,
+             aktif TINYINT(1) NOT NULL DEFAULT 1,   -- 0 = deactivated: login refused post-credential-match (`MsgLoginInactive`), running sessions die via `LoadSession`, deactivation revokes sessions (`DELETE FROM sessions WHERE user_id=?`); history/results rows are NOT filtered; reactivation requires fresh login
              created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 
 -- Sessions (source of truth; in-memory mirror TTL 5 min)
@@ -268,7 +271,7 @@ password_resets id INT UNSIGNED AUTO_INCREMENT PK,
 ### 6.1 Realtime: SSE + POST JSON (approved approach A)
 - Server→client: SSE (`EventSource`, native auto-reconnect) — live monitor, ranking, anti-cheat alerts, waiting-room updates, start/stop broadcasts, correct-answer previews, force-stop.
 - Client→server: POST JSON for every non-SSR communication (answers, start, visibility events, actions).
-- **Server side runs on `tmaxmax/go-sse`**: two topics per quiz — `quiz:<id>` (students) and `quiz:<id>:teacher` (monitor) — role filtering at subscribe time; each connection is single-topic (EventSource cannot send the `Subscribe` header), topic resolved from the URL path; hub built on `Upgrade` + `Joe` with a guarded queue writer because `sse.Server.Publish` blocks on slow clients; no dashboard/history topics (those pages are plain SSR). The `realtime/` package owns what the library doesn't: snapshot-on-reconnect, heartbeat, and the slow-client drop policy (§8).
+- **Server side runs on `tmaxmax/go-sse`**: two topics per quiz — `quiz:<id>` (students) and `quiz:<id>:teacher` (monitor) — role filtering at subscribe time; each connection is single-topic (EventSource cannot send the `Subscribe` header), topic resolved from the URL path; hub built on `Upgrade` + `Joe` with a guarded queue writer because `sse.Server.Publish` blocks on slow clients; no dasbor/history topics (those pages are plain SSR). The `realtime/` package owns what the library doesn't: snapshot-on-reconnect, heartbeat, and the slow-client drop policy (§8).
 - **Wire shape (amendment):** every frame's `data` field carries the full `{"type":…,"data":…}` envelope (pinned by tests) — client handlers must unwrap `d.data` before reading payload fields; parsing the raw `ev.data` as the payload makes the monitor's greeting snapshot normalize to an empty card list and wipe the cards right after each page load.
 - **Stream-lifecycle presence (amendment):** opening or closing a student stream (refresh, leave-and-return) republishes that participant's `page` event — name, status, page, clocks, `connected` — to the teacher topic (`Streams.announcePresence`), because workspace renders only announce *changed* pages; a reconnect that keeps the same page must still show the murid leave and come back. A submitted attempt is never re-announced (its `finished` event already removed the card).
 - No WebSocket library.
@@ -294,7 +297,7 @@ password_resets id INT UNSIGNED AUTO_INCREMENT PK,
 ### 6.3 Rehydrate after container restart
 1. Clients auto-reconnect (`EventSource` built-in retry).
 2. On boot: `SELECT quizzes WHERE status='berjalan'` → rebuild hub from participants/answers → warm cache.
-3. Each client receives a **snapshot** (current question, time left = `ends_at - now`, ranking from answers, cheat badges, pending approvals) → session continues, timers do not reset.
+3. Each client receives a **snapshot** (current question + its text, time left = `ends_at - now`, the last answer rendered server-side from that attempt's `qorder` in that murid's own shuffled display letters as `jawaban pertanyaan N · <teks>: <huruf>` (`answer_display`), ranking from answers **only when `ranking_live` is on — with it off the Peringkat langsung section is absent entirely (SSR + snapshot + JS guard)**, cheat badges, pending approvals) → session continues, timers do not reset.
 4. Participants whose `ends_at` already passed while down → auto-finished with stored answers.
 5. Sessions survive restart (DB-backed).
 
@@ -326,26 +329,27 @@ nonaktif ──activate──▶ aktif ──close (modal if N working)──▶
 
 ### 6.6 Timer model — per-participant absolute clock
 - **Global:** at START every participant gets `ends_at = start + total_seconds` (if `timer_on=0`: no countdown/timeout; ends via STOP or "all finished" confirmation).
-  - End triggers (race-safe): **timeout auto-finishes** (no confirmation — wall-clock decides); **manual STOP** and **"all students finished"** both require a teacher confirmation modal. All three funnel through `UPDATE ... SET status='selesai' WHERE status='berjalan'` — first commit wins, others no-op.
-- **Per-question:** timer starts when student clicks Start: total = `per_question_seconds × question_count`. `timer_on=0` → no countdown.
-- **No timer (`tanpa_timer`):** the per-question flow (student starts own attempt, free navigation, teacher closes) with no countdown at all — `timer_on` derives to 0, `ends_at` stays NULL, timer seconds are stored as 0.
+  - End triggers (race-safe): **timeout auto-finishes** (no confirmation — wall-clock decides); **manual STOP** and **"all students finished"** both require a teacher confirmation modal. Guards are per-path, not one funnel: global path closes via `UPDATE ... SET status='selesai' WHERE status='berjalan'` (`Stop`/watchdog); per-question path closes via `WHERE status='aktif'` (`SetQuizStatus`/`closeWithModal`).
+- **Per-question:** timer starts when student clicks Start: attempt budget = `per_question_seconds × question_count` — that attempt-level `ends_at` stays as the hard cap (timeout auto-finishes unchanged). On top of it, each question gets its own countdown, displayed to the student: it starts from `current_q_since` on entering or refreshing a question and is re-synced on every heartbeat (the `ping` frame's `server_now` re-skews the clock), so a refresh resumes the remaining time — `per_question_seconds − (server_now − current_q_since)`. On expiry WITHOUT an answer a Bootstrap **"Waktu habis"** modal shows, then the attempt auto-advances (last question → pre-submit preview); expiry WITH an answer advances silently — one expiry action per question position, never a loop. Navigation is forward-only: `Previous` is hidden, backward `POST /quiz/:code/next` → `409`, while `Next` stays available during the countdown. `timer_on=0` → no countdown.
+- **No timer (`tanpa_timer`):** the per-question flow (student starts own attempt, free navigation in both directions — forward-only is `per_soal`-only, teacher closes) with no countdown at all — `timer_on` derives to 0, `ends_at` stays NULL, timer seconds are stored as 0.
 - **Disconnect pause:** freeze `ends_at` at the **last heartbeat second** (not detection time), store `remaining_seconds`; on reconnect `ends_at = now + remaining_seconds`. Applies to both timer types (fairness per participant; others unaffected).
 - Downtime during restart counts against wall-clock `ends_at` (acceptable for local deployment).
 
 ### 6.7 Answer flow → preview → ranking
-1. Student submits → `POST /answer` → idempotent upsert (`uq_ans`) → compute `is_correct` → **SSE push to teacher monitor** (current question, dwell time, selected option in real time).
+1. Student submits → `POST /answer` → idempotent upsert (`uq_ans`) → compute `is_correct` → **SSE push to teacher monitor** (current question, dwell time, selected option in real time; the `answer` frame also carries `answer_display` — the stored original indexes rendered as that murid's own display letters via the attempt's `qorder` — and `q_teks`, the answered question's text).
 2. **Correct/wrong preview** (`show_correct_wrong`):
    - **Linear mode (global):** `/answer` response includes preview → shown 2–3 s → auto-next. OFF → no preview, immediate advance.
    - **Review mode (per-question):** `/answer` never leaks correctness; preview appears on `POST /next` (Next press) — there is no Finish button anymore. OFF → no preview.
    - Final results page always shows preview if setting ON.
-2b. **Navigation & pre-submit review:** exactly two pager buttons per question (`Previous`, `Next`). **Essay answers autosave** on every character change (`input` → debounced save; the Save button is gone) through one serialized save chain per card. `Next` on the final question — and the first moment every question is answered — opens the **preview page**: one box per question (green = answered, red = unanswered) with `Back to questions` + `Submit quiz`; manual submit now happens only there. The workspace reports the preview open/close via `POST /quiz/:code/page {page: "question"|"preview"}` → SSE `page` event, so the live monitor shows the murid on **Preview** in every timer mode. `page` events fire on start/navigation too (name + current page live); a submitted attempt **leaves the monitor cards**.
+2b. **Navigation & pre-submit review:** exactly two pager buttons per question (`Previous`, `Next`) — in `per_soal` the `Previous` button is hidden (forward-only navigation: backward `/next` is refused with `409`), while `tanpa_timer` keeps free navigation with both buttons. **Essay answers autosave** on every character change (`input` → debounced save; the Save button is gone) through one serialized save chain per card. `Next` on the final question — and the first moment every question is answered — opens the **preview page**: one box per question (green = answered, red = unanswered) with `Back to questions` + `Submit quiz`; manual submit now happens only there. The pager must never appear while the review is open: the `hidden` attribute used to lose to Bootstrap's `d-flex` (`display:flex !important`), so `web/css/app.css` now pins `[hidden] { display: none !important; }` and `render()` keeps both pager buttons hidden until the review closes. The workspace reports the preview open/close via `POST /quiz/:code/page {page: "question"|"preview"}` → SSE `page` event, so the live monitor shows the murid on **Preview** in every timer mode. `page` events fire on start/navigation too (name + current page live); a submitted attempt **leaves the monitor cards**.
 3. **Ranking live** (`ranking_live=ON`): computed **in-memory** from progress points (correct relative to total), pushed to student leaderboard **and** teacher monitor on every answer. Zero DB queries per event; rebuildable from `answers` on demand.
-4. Finish (submit/timeout/STOP/removal/close): `score_auto = correct/total × 100`, **unanswered = wrong**. If quiz has essays → `final_score` stays NULL until teacher grades, then `score_auto + essay_score`.
+4. Finish (submit/timeout/STOP/removal/close): `score_auto = correct/total × 100`, **unanswered = wrong**. If quiz has essays → `final_score` stays NULL until EVERY essay answer of that participant is graded (partial grading never finalizes), then `score_auto + essay_score`.
 5. **Per-question time ledger (mirror):** every free-navigation move banks the elapsed seconds of the question being left (`Live.AddSpent`, in-memory, restart-safe-by-rebuild = display only, never a schema change) — the monitor shows `Q1 0:12 · Q2 0:45 · Q3 …` (running) per participant in `per_soal` mode.
 
 ### 6.8 Shuffle / order
 - `qorder` snapshot (per participant, written at start): question order + option order.
 - Option shuffle is **per-student** (option "B" may differ between students → answers store **original option indexes** from the pre-shuffle options array, letters rendered server-side from snapshot).
+- The monitor renders each answer in that murid's own shuffled letter order, mapping stored original indexes → display letters through that attempt's `qorder` snapshot (`DisplayLetters` is the mapping helper, surfaced as `answer_display` on cards and SSE `answer` frames). The server is the single source of truth: no client-side shuffling exists, and the browser does no index→letter math.
 - If sequential question order chosen → `shuffle_questions=0` forced **server-side** (not just UI).
 - **Manual order:** the teacher reorders the composed list (`POST /teacher/quiz/:id/questions/reorder`) — the payload must be EXACTLY the composed set (empty / duplicate / mismatched set → 400 VALIDATION, unknown quiz → 404) and `seq` is renumbered 1..N in one transaction, only while `nonaktif` (same guard as remove → otherwise 409 locked). `loadQuestions` reads `ORDER BY seq`, so the teacher's order is what every FUTURE attempt snapshots; an attempt's existing `qorder` is never rewritten, and the shuffle overrides the teacher order only when `shuffle_questions=1`. The manage page exposes it as per-row up/down buttons (disabled at the first/last row, hidden while the table is filtered by `?qq=` — a slice cannot post a complete order), applied optimistically with rollback on failure.
 - `max_attempts`: global timer always forced to 1. Per-question honors setting; ranking uses MAX(`final_score`); all attempts shown in student history and teacher data.
@@ -354,7 +358,8 @@ nonaktif ──activate──▶ aktif ──close (modal if N working)──▶
 - `visibilitychange`/`blur`/gap > 30 s → `POST /visibility {kind}` → insert `anti_cheat_events` → **SSE push to that student's card in teacher monitor**.
 - **Both buttons appear only after a violation exists OR the student is flagged (`participants.cheating`):** `Cheat` toggle (idempotent, sets `participants.cheating`) and `Remove` (always behind a confirmation modal). A detected/flagged card turns yellow (`bg-warning-subtle`) with its badge (`flagged` when flagged, `N violation(s)` when only detected).
 - Student keeps working until teacher acts.
-- **Event flood control:** duplicate kind within 10 s collapses to one row; events after quiz end are ignored.
+- **Student-facing copy:** neither the flagged modal nor the finished view says "percobaan" anymore — the modal tells the student the teacher marked `kuis "<judul>"` as cheating seen in live monitoring, and the finished heading is **"Kuis selesai"**. The post-submit cheating warning line was removed: submit shows only the finished view (score/pending + back to dasbor).
+- **Event flood control:** duplicate kind within 10 s collapses to one row; events after quiz end are ignored. Collapse untuk submisi sekuensial/single-flight; duplikat konkuren dapat tercatat ganda; count monoton dinormalisasi di tampilan.
 
 ### 6.10 Removal semantics
 - Removed **in waiting room** (never started): status `dikeluarkan`, `final_score=NULL`, excluded from ranking, shown in history as removed.
@@ -362,15 +367,15 @@ nonaktif ──activate──▶ aktif ──close (modal if N working)──▶
 
 ### 6.11 Results & history
 - **Teacher results — two views sharing one tab bar (separate routes):**
-  - **`/results` — students:** participant list (name, final score, **correct count** `x/y`, status: finished/removed/cheating, awaiting-grading) where every row expands into an answer panel with one line per question: the student's answer beside the answer key plus the state (correct / wrong / unanswered / graded / awaiting grading). Letters are ORIGINAL option indexes, so answer and key always line up regardless of option shuffle. **Export in both CSV and XLSX** via `?format=csv|xlsx` (default `csv`): gocsv for CSV, excelize ≥v2.11.0 for XLSX (streaming writer). Both **injection-guarded**: values starting `=`/`+`/`-`/`@` get `'` prefix (CSV) / written as literal text cells, never formulas (XLSX); empty results → header-only file.
+  - **`/results` — students:** participant list (name, final score, **correct count** `x/y`, status: finished/removed/cheating, awaiting-grading) where every row expands into an answer panel with one line per question: the student's answer beside the answer key plus the state (correct / wrong / unanswered / graded / awaiting grading). Letters are ORIGINAL option indexes, so answer and key always line up regardless of option shuffle. **Export in both CSV and XLSX** via `?format=csv|xlsx` (default `csv`): stdlib `encoding/csv` for CSV, excelize ≥v2.11.0 for XLSX (streaming writer). Both **injection-guarded**: values starting `=`/`+`/`-`/`@` get `'` prefix (CSV) / written as literal text cells, never formulas (XLSX); empty results → header-only file.
   - **`/results/analysis` — per-question analysis:** % correct/wrong/unanswered and the most-chosen option, on its own route so that (per-question + most-chosen) query is only computed when this view is opened.
-- **Essay grading:** teacher opens student's essay answers → inputs scores → `final_score` finalized. Before grading: "awaiting grading".
+- **Essay grading:** the grading page is grouped **one card per essay question** — containing every student's answer to that question with a per-student score input (0–100), each saved through the same `POST /grading/:answerId`. `essay_score = Σ(graded scores)/total_questions` (2 dp, half-up): each save adds exactly `score/total`, so a score of 100 carries the same weight as one correct MCQ (100 → 100/total). `final_score` is set only when ALL of that participant's essay answers are graded; otherwise it stays NULL ("Menunggu penilaian") — awaiting/pending semantics are unchanged from the student's and the results' perspective until then.
 - **Student history:** all attempts listed; respects per-quiz settings: show/hide score, show/hide ranking, question review `none` / `text` (question + own answers + right/wrong marks, no key) / `full` (with answer key).
 - Ranking across attempts uses highest score.
 
 ### 6.12 Join rules
 - Open to all students regardless of class/major (class/major = profile labeling only).
-- Join modes: **Open** (immediate registration/waiting room) or **Approve** (request appears on teacher dashboard → approve/reject).
+- Join modes: **Open** (immediate registration/waiting room) or **Approve** (request appears on dasbor guru → approve/reject).
 - After START pressed (global): new joiners rejected with exact message **"Kuis sedang berlangsung, Anda tidak dapat bergabung."**
 - Pending approvals are settled at START: any row still `pending` when START fires becomes `dikeluarkan` (`final_score=NULL`) in the same transaction; approve attempts after START return `409`.
 - Registration ≠ start for per-question quizzes; student starts anytime while quiz is active and they are registered.
@@ -396,7 +401,7 @@ Templates build static URLs through the `asset` func (`{{asset "/css/app.css"}}`
 
 ## 7. Routing
 
-**Path language:** all URL paths are **English** (UI text = bahasa Indonesia baku KBBI). Schema column/ENUM literals stay as approved in §5 — they are internal identifiers, never user-facing.
+**Path language:** all URL paths are **English** (teks yang dirender = bahasa Indonesia baku KBBI per §1 — klaim bahasa hanya mencakup teks pengguna, bukan identifier). Schema column/ENUM literals stay as approved in §5 — they are internal identifiers, never user-facing (render memakai label Indonesia via peta terpusat §1).
 
 **Config note:** `DB_HOST` is not an application config key — it is supplied only by Docker compose `environment:` and by the `env-default` fallback.
 
@@ -419,8 +424,8 @@ POST /change-password     new + confirm → clear flag, revoke old sessions
 
 ### Teacher (`/teacher/*`, authTeacher middleware)
 ```
-GET  /teacher                     dashboard (quiz list + reset-request badge)
-GET  /teacher/api/overview        JSON analytics overview for dashboard cards/charts/table — filters (?kelas/?jurusan/?status, 400 VALIDATION on bad values), summary, per-kelas, per-jurusan, quizzes, rekap_nilai; no-store
+GET  /teacher                     dasbor guru (quiz list + reset-request badge)
+GET  /teacher/api/overview        JSON analytics overview for dasbor cards/charts/table — filters (?kelas/?jurusan/?status, 400 VALIDATION on bad values), summary, per-kelas, per-jurusan, quizzes, rekap_nilai; no-store
 GET|POST /teacher/classes, /teacher/majors CRUD dropdowns
 GET  /teacher/classes/new       add form (own page, posts to /teacher/classes)
 GET  /teacher/majors/new        add form (own page, posts to /teacher/majors)
@@ -480,12 +485,17 @@ POST /teacher/quiz/:id/start      global: begin countdown (→ berjalan)
 POST /teacher/quiz/:id/stop       confirm → end all (unanswered = wrong)
 
 GET  /teacher/quiz/:id/monitor    live monitor (SSE): waiting room + student cards
-                                    (current page — Question N or Preview — dwell time,
-                                    per-question time spent in per-question mode,
-                                    selected answer, yellow cheating card with badge,
+                                    (current page — Question N + its text or Preview —
+                                    dwell time, per-question time spent in per-question
+                                    mode, last answer as `jawaban pertanyaan N · <teks>:
+                                    <huruf>` — the letters are the murid's own shuffled
+                                    option letters (`answer_display` from that attempt's
+                                    `qorder`) — plus the current question text,
+                                    yellow cheating card with badge,
                                     [Cheat] toggle + [Remove] buttons after a violation
                                     OR once flagged; Remove = modal; a submitted student
-                                    leaves the cards)
+                                    leaves the cards; the Peringkat langsung section
+                                    renders only when `ranking_live`)
 GET  /teacher/quiz/:id/monitor/stream SSE stream (JSON events)
 GET  /teacher/quiz/:id/qr         PNG QR code of the join URL (join via QR)
 POST /teacher/quiz/:id/participants/:pid/action
@@ -500,12 +510,15 @@ GET  /teacher/quiz/:id/results    student list (rank / score / correct count / f
 GET  /teacher/quiz/:id/results/analysis per-question analysis (% correct/wrong/unanswered,
                                     most-chosen option) — its own route so the analysis
                                     query only runs when this view is opened
-GET  /teacher/quiz/:id/grading    essay grading view
-POST /teacher/quiz/:id/grading/:aid save essay score → finalize final_score
+GET  /teacher/quiz/:id/grading    essay grading view — one card per essay question,
+                                    every student's answer + per-student score input
+POST /teacher/quiz/:id/grading/:aid save one essay score → essay_score = Σ(graded)/total;
+                                    final_score set only when that participant has no
+                                    ungraded essay answers left (else stays NULL)
 GET  /teacher/quiz/:id/results/export?format=csv|xlsx   streaming download (default csv)
 
 GET  /teacher/password-resets     pending reset requests
-POST /teacher/password-resets/:id/approve   → must_change_pw=1
+POST /teacher/password-resets/:id/approve   requires `temp_password` (policy ≥ 8 runes) → sets `password_hash + must_change_pw=1`, revokes prior sessions
 POST /teacher/password-resets/:id/reject
 ```
 
@@ -523,7 +536,7 @@ GET  /about               about page (feature overview, both roles)
 
 Behind authStudent middleware:
 ```
-GET  /student             murid dashboard: join-code input + active quizzes
+GET  /student             dasbor murid: join-code input + active quizzes
                           (sidebar shell; role-isolated menu); renders the
                           ongoing-quiz notice modal (data-ssr-modal, auto-shown
                           by ui.js) whenever a 'started' attempt is still open
@@ -541,7 +554,9 @@ GET  /quiz/:code/stream   SSE: start broadcast, teacher events, live ranking,
                           correct preview, anti-cheat alerts, force-stop, time left
 POST /quiz/:code/start    per-question: start personal timer
 POST /quiz/:code/answer   JSON {question_id, answer} → upsert + score
-POST /quiz/:code/next     review mode: advance + preview payload (if setting ON)
+POST /quiz/:code/next     review mode: advance + preview payload (if setting ON);
+                          per_soal is forward-only — target < current → 409 CONFLICT
+                          ("Pertanyaan sebelumnya tidak dapat dibuka kembali.")
 POST /quiz/:code/page     workspace beacon {page: question|preview} → SSE `page`
                           event: live monitor follows the murid's page in every
                           timer mode (mirror-only — no DB write)
@@ -575,9 +590,10 @@ HTTP: `400` validation · `401` unauthenticated · `403` role/locked · `404` mi
 **Auth & session**
 - Login failure returns a generic message (never reveals whether the account exists); duplicate username/email on register → `409`.
 - Register success → success flash on `/login?registered=1` (`MsgRegistered`); no session is created — the student signs in manually, and the `pending_join` cookie survives the redirect to be consumed at that sign-in.
-- Forgot-password: name+account mismatch → same generic message for both failure kinds; duplicate requests → only one `pending` active; double-click approve → idempotent `WHERE status='pending'`.
+- Forgot-password: name+account mismatch → same generic message for both failure kinds; duplicate requests → only one `pending` active; double-click approve → idempotent `WHERE status='pending'`. Approve requires a guru-supplied temporary password (`temp_password`, policy ≥ 8 runes else `400 VALIDATION`, bcrypt hash computed before the tx); the tx writes `password_hash + must_change_pw=1`; after commit all prior sessions of the user are revoked (`RevokeUserSessions`). Login always verifies the password — an approved reset does NOT skip verification (temp password checked via bcrypt); `must_change_pw` only selects the `/change-password` target.
 - `must_change_pw` enforced by middleware redirect; password < 8 chars or confirm mismatch → `400`; on change → delete all sessions + invalidate cache.
 - Tampered/expired/unknown-session cookie → treated as logged-out + cookie cleared; double logout = safe no-op.
+- Account deactivation (`users.aktif=0`): login refused with `MsgLoginInactive` only after the password matched (never an existence oracle); running sessions die via `LoadSession`; deactivation revokes all sessions; history/results rows unfiltered; reactivation requires fresh login.
 
 **CRUD**
 - Race: two tabs editing → guard in handler + `WHERE status='nonaktif'` → `409`.
@@ -591,7 +607,7 @@ HTTP: `400` validation · `401` unauthenticated · `403` role/locked · `404` mi
 
 **Global flow**
 - START with zero participants allowed (after confirmation modal showing 0).
-- STOP vs timeout vs all-finished race → single transition `WHERE status='berjalan'`; losers no-op.
+- STOP vs timeout vs all-finished race → per-path single transition: global `WHERE status='berjalan'` (`Stop`/watchdog), per-question `WHERE status='aktif'` (`SetQuizStatus`/`closeWithModal`); losers no-op.
 - Simultaneous answer + timeout → **server wall-clock wins** (checked inside the transaction).
 - Removed in waiting room → `final_score=NULL`, out of ranking; removed while working → snapshot, in ranking, flagged.
 
@@ -609,7 +625,7 @@ HTTP: `400` validation · `401` unauthenticated · `403` role/locked · `404` mi
 - DB write failure → no broadcast (clients keep last known state).
 
 **Anti-cheat & export**
-- Flood → 10 s collapse per kind; post-finish events ignored; toggle idempotent.
+- Flood → 10 s collapse per kind (collapse untuk submisi sekuensial/single-flight; duplikat konkuren dapat tercatat ganda; count monoton dinormalisasi di tampilan); post-finish events ignored; toggle idempotent.
 - **CSV and XLSX** injection guard (CSV: `'` prefix; XLSX: string cells only, never formula cells — guard against `=`/`+`/`-`/`@` leading values); empty dataset → header-only file.
 - Unknown `?format=` → `400 VALIDATION` (never silently fall back).
 
@@ -620,7 +636,7 @@ HTTP: `400` validation · `401` unauthenticated · `403` role/locked · `404` mi
 **Framework:** Go built-in `testing` + `net/http/httptest`. No third-party test framework.
 
 **Levels:**
-- `tests/unit/` — pure logic, **no DB/HTTP**; injectable fake clock; seeded RNG for shuffle. Fast, deterministic, parallel-safe.
+- `tests/unit/` — pure logic, **no DB/HTTP**; injectable fake clock; seeded RNG for shuffle. Fast, deterministic. Parallel-safety is unproven (no `t.Parallel()` anywhere; `AGENTS.md` forbids it) — run sequentially.
 - `tests/integration/` — real handlers over HTTP against MariaDB test database (`quiz_test`), truncated per test.
 - `tests/{cache,config,db}/` — per-package tests for `internal` mirrors/config/pool (packages `cachetest`, `configtest`, `dbtest`); no HTTP; DB-dependent ones use the shared `quiz_test` gate.
 - `internal/middleware/assets_test.go` (package `middleware`, in-package): `Fingerprints` = sha256[:12], `asset` `?v=`/passthrough, `StaticCache` header matrix (7 subtests).
@@ -635,7 +651,7 @@ HTTP: `400` validation · `401` unauthenticated · `403` role/locked · `404` mi
 | `ranking_test.go` | progress points, ordering, removed included, registered-not-started excluded, updates per answer |
 | `attempt_test.go` | attempt limits, global forced to 1, two started attempts prevented |
 | `review_matrix_test.go` | 3 review levels × show_final_score × ranking_live → correct history data |
-| `authlogic_test.go` | forgot-password match/mismatch, password validation, generic login message, join-code retry |
+| `auth_test.go` / `quiz_crud_test.go` (integration) | forgot-password match/mismatch, password validation, generic login message, join-code retry (delegated from unit — no `authlogic_test.go` unit file) |
 | `anticheat_test.go` | 10 s collapse, post-finish ignored, toggle idempotent |
 | `uploads_test.go` | initiate validation (size/total/sha bounds), chunk order gate (first / sequential / retransmit-last / gap / replay-too-old / out-of-range), magic-byte allowlist (jpeg/png/gif/webp + rejects), ref-path regex, sweep planner (old+unlinked swept; linked & fresh kept), chunk assembly from t.TempDir (concat+sha, missing chunk, sha mismatch keeps chunks) |
 
@@ -648,7 +664,7 @@ HTTP: `400` validation · `401` unauthenticated · `403` role/locked · `404` mi
 | `quiz_crud_test.go` | `409` edit-active race (two tabs), delete-attempted blocked, validation, activate-without-questions, code collision |
 | `join_matrix_test.go` | full matrix: every `status × join_mode` → expected response (in-progress message, attempt exhausted, pending lapsed after START) |
 | `flow_global_test.go` | waiting room→approve/open→START→linear+preview→STOP/timeout/confirm race→results; removed in waiting room vs while working |
-| `flow_persoal_test.go` | registered→start→jump→back, timer expired at submit, close with modal (N working), registered-not-started, re-attempt |
+| `flow_persoal_test.go` | registered→start→jump, backward `/next` → `409` (forward-only in per_soal), timer expired at submit, close with modal (N working), registered-not-started, re-attempt |
 | `realtime_test.go` | SSE event order, **snapshot rehydrate = new hub built from DB** (simulated restart), heartbeat, full buffer→disconnect, concurrent submits→single row |
 | `anticheat_test.go` | visibility POST → log + card + buttons visibility, flood collapse |
 | `monitor_tracking_test.go` | workspace `page` beacon → teacher SSE `page` event + monitor blob (`page`/`spent`, `selesai` leaves cards); yellow cheating card + badge + both action buttons; start announces name+page in all three timer modes; started workspace has exactly 2 nav buttons + preview panel, no finish/save button; student stream open/close republishes presence (`connected` true → false) so a refresh repaints the monitor |
@@ -657,12 +673,15 @@ HTTP: `400` validation · `401` unauthenticated · `403` role/locked · `404` mi
 | `export_test.go` | CSV content + injection guard; XLSX content readable via excelize + string-cell guard; `?format=xlsx` valid, `?format=bogus` → 400; empty dataset → header-only both formats |
 | `export_sheets_test.go` | 3-sheet workbook contract [Murid, Pertanyaan, Rekapitulasi] in order; frozen `ySplit=1` + `#2C5EAD` bold header on every sheet; Rekapitulasi `SetCellFormula` cells (`CellTypeFormula`, cross-sheet `Murid!`/`Pertanyaan!`); Pertanyaan TOTAL `SUM` formula; CSV 9 legacy headers + Q<i> Answer/Score pairs + `Question text` row |
 | `search_ssr_test.go` | SSR search params `qq` (composed) / `bq` (bank) / `q` (roster) isolated per region, empty+absent param = full list, cross-contamination blocked, hostile input escaped (200, no raw tag) |
-| `nav_no_root_links_test.go` | no exact `href="/"` on any of 13 app-shell pages; static "Dashboard" crumb; role-mapped brands (guru → /teacher, murid → /student) |
+| `nav_no_root_links_test.go` | no exact `href="/"` on any of 13 app-shell pages; static "Dasbor" crumb; role-mapped brands (guru → /teacher, murid → /student) |
 | `reorder_test.go` | reorder payload ladder (empty/zero/non-numeric/duplicate/mismatched-set/foreign id → 400, unknown quiz → 404, active quiz → 409 locked) with seq untouched by rejections, JSON + urlencoded acceptance renumbering seq 1..N, mirror invalidation; student `qorder` = teacher order with shuffle off, `BuildOrder` over the teacher order with shuffle on |
 | `results_split_test.go` | `/results` renders the expandable answer panel (answer + key side by side, correct/wrong/unanswered badges, correct count) and no analysis table; `/results/analysis` renders the analysis alone with its own active tab; both 404 on unknown ids |
 | `upload_test.go` | initiate→chunks→complete happy path + idempotent re-complete, out-of-order chunk → 400 "in order" then ordered retry succeeds, oversize/fake-MIME/sha-mismatch/incomplete → 400, cancel → session dir gone, attached upload → 409, expiry sweep I/O (linked dirs survive), media endpoint: 200 header matrix (Content-Type/Cache-Control/ETag/nosniff/inline), 304 on If-None-Match, 401 anonymous, 404 unknown/inactive/invalid-path |
+| `publish_guard_test.go` | negative failure-injection: DB-down stop → 5xx with zero teacher-topic SSE events; DB-down approve (with `temp_password`) → 5xx, row stays `pending`, `must_change_pw` stays 0 |
 
-**Determinism rules:** inject clock (no `time.Now` in logic), seeded RNG in tests, truncate relevant tables per test → safe to re-run and run sequentially.
+**Determinism rules:** inject clock (clock seam lives only in `quizengine`; handlers still call wall-clock — e.g. answer-vs-timeout, `ends_at` computation, collapse gate, `current_q_since` — and are covered by sleep-based integration, not unit determinism), seeded RNG in tests, truncate relevant tables per test → safe to re-run and run sequentially.
+
+**DB prerequisite:** integration tests require a live MariaDB — run `docker compose up -d db` first (test DB `quiz_test`); without a DB the suite SKIP-gates via `testutil.DB` (suite exits 0 without exercising integration). "Green" in §11.14 means green with the DB up.
 
 **Test-quality bar:** every branch of the edge-case matrix has a test that **fails when the code is wrong** — not merely "does not panic". Never delete or disable a failing test.
 
@@ -678,10 +697,10 @@ HTTP: `400` validation · `401` unauthenticated · `403` role/locked · `404` mi
 - Keep `go vet` + `go test ./... -race -count=1` green before every commit.
 - Route user feedback through Bootstrap: Toasts for notifications (SSR messages arrive as the `Flash` payload rendered by `layout/feedback.html`, JS failures via `quizToast`), Bootstrap Modal for every confirmation (`quizConfirm`); messages that survive a reload travel through `sessionStorage` (`quizStoreFlash`).
 - Numbered migrations in `migrations/`; keep schema in sync with §5 (living spec).
-- Stay within the closed 8-module list (§2): `echo/v5`, `go-sql-driver/mysql`, `x/crypto`, `skip2/go-qrcode`, `tmaxmax/go-sse`, `cleanenv`, `gocsv`, `excelize/v2` — and never below the security-floor versions in §2 (excelize ≥v2.11.0, x/crypto ≥v0.55.0).
+- Stay within the closed 7-module list (§2): `echo/v5`, `go-sql-driver/mysql`, `x/crypto`, `skip2/go-qrcode`, `tmaxmax/go-sse`, `cleanenv`, `excelize/v2` — and never below the security-floor versions in §2 (excelize ≥v2.11.0, x/crypto ≥v0.55.0). Vendored Chart.js v4.5.1 MIT (`web/vendor/chartjs/`) is the registered runtime JS asset.
 
 **Ask first:**
-- Database schema changes (columns, tables, indexes, ENUM values).
+- Database schema changes (columns, tables, indexes, ENUM values) — including account-lifecycle fields like `users.aktif` and their login/session/history semantics.
 - Adding/upgrade any dependency in `go.mod` or image versions.
 - New auth paths/roles or changes to `/teacher/*` access rules.
 - SSE contract changes (event names, payloads) or removing schema columns.
@@ -704,33 +723,36 @@ HTTP: `400` validation · `401` unauthenticated · `403` role/locked · `404` mi
 
 **Functional (each proven by integration tests):**
 1. Teacher logs in from `.env`; student registers → logs in (username/email) → edits profile.
-2. Full forgot-password flow: input matches → request appears on teacher dashboard → approve → **next login skips password validation → locked on change-password until new password set** → old sessions dead.
+2. Full forgot-password flow: input matches → request appears on dasbor guru → approve with guru-supplied temporary password → **approved reset does NOT weaken authentication: login always verifies the temporary password via bcrypt (no skip), `must_change_pw=1` locks the account on change-password until a new password is set, old sessions die (revoked at approve commit + cleared at change)** → old sessions dead.
 3. Question bank CRUD (3 types) + length filter during compose + manual `seq` ordering.
 4. **Edit active quiz → `409`** (two-tab race test); edit only when `nonaktif` + zero attempts.
 5. **Global quiz:** join (code/URL/QR) → waiting room (open/approve) → START countdown → linear mode (auto-next, preview on/off) → STOP/timeout/confirm-all-finished → results, unanswered = wrong.
-6. **Per-question quiz:** registered ≠ start; personal timer = n × seconds; jump/back navigation; close → modal "N working" → lock all.
+6. **Per-question quiz:** registered ≠ start; personal timer = n × seconds with a per-question countdown ("Waktu habis" modal → auto-advance, silent when already answered); forward-only navigation — backward `POST /next` → `409`; close → modal "N working" → lock all.
 7. Every quiz setting has real effect: option/question shuffle (sequential forces options off), review none/text/full, show score, show ranking — proven by `review_matrix_test`.
 8. **Live monitor:** current page (Question N **or Preview**), dwell time, selected answer in real time (MC on click, essay on autosave) in **every timer mode** — no-timer students appear with name + page the moment they start; per-question mode also shows time spent per question; submitted students leave the cards; all quiz types have a monitor. The monitor never goes blank on refresh (the greeting snapshot restores every card) and a murid who closes/reopens their quiz page flips `connected` live via the stream-lifecycle presence push.
 9. **Anti-cheat:** blur/minimize/switch/sleep → log + teacher notification → yellow card + badge with `Cheat` toggle + `Remove` (modal) appearing **only** after a violation **or a flag**; both functional (toggle idempotent, remove modal-mandatory).
 10. **Student history** honors all setting combinations; every attempt shown; ranking = highest score; removed & cheating clearly flagged.
-11. **Essay grading:** teacher inputs scores → `final_score` finalized; before grading shows "awaiting grading".
+11. **Essay grading:** one card per essay question with per-student score inputs → `essay_score = Σ(graded)/total_questions`; `final_score` finalized only when ALL of that participant's essay answers are graded, before that "awaiting grading".
 12. **Teacher results:** scores + flags + per-question analysis (% correct/wrong/unanswered, most-chosen option) + export in **both CSV and XLSX** (injection-safe in both; `?format=xlsx` produces a file that excelize re-opens with correct cell values).
 13. **Live ranking ON** → shown on student screens **and** teacher monitor, updates on every answer.
 
 **Robustness:**
-14. `go test ./... -race -count=1` fully green — unit + integration, nothing disabled.
+14. `go test ./... -race -count=1` fully green with the DB up (`docker compose up -d db`, test DB `quiz_test`) — unit + integration, nothing disabled; without a DB the suite SKIP-gates via `testutil.DB` (exit 0, integration unexercised — not a green claim).
 15. **Rehydrate after restart:** new hub from DB → running status, remaining time (`ends_at`), ranking, cheat flags, approval queue restored identically; expired-while-down → auto-finished.
 16. Disconnect → timer frozen at last heartbeat → reconnect resumes with no time lost.
-17. DB write failure → no broadcast (state never newer than DB).
+17. DB write failure → no broadcast (state never newer than DB) — locked by negative tests `tests/integration/publish_guard_test.go` (DB-down stop → 5xx + zero teacher-topic events; DB-down approve → 5xx, row stays `pending`).
 18. Join after START → exact message: **"Kuis sedang berlangsung, Anda tidak dapat bergabung."**
 
 **UI & deployment:**
-19. `docker compose up --build` works from a clean machine (`http://localhost:8090`); identical images (Go 1.26.6-alpine, mariadb:12, alpine:3.24, Bootstrap 5.3.8 vendored).
+19. `docker compose up --build` works from a clean machine (`http://localhost:8090`); application images Go 1.26.6-alpine + mariadb:12 + alpine:3.24 with Bootstrap 5.3.8 vendored; dasbor guru charts render via vendored Chart.js v4.5.1 canvas (§2/§4), not identical images.
 20. Layout CSS limited to `web/css/app.css` (Bootstrap utilities first); responsive; light/dark toggle; modern radius; **custom blue palette** (no default Bootstrap colors) with controlled semantic accents — danger `#C93128` (error/delete/cheat), success `#0E7A46` (correct), warning `#A15C0B`, **unified across both themes**: light body `#F4F8FD` / ink `#0F2240` with primary + links `#2C5EAD`, dark derived from the same blue family (body `#0B1A30` / ink `#D7E8F8`, primary `#1591DC`, links `#4BB8FA`, sidebar + tertiary `#10233F`) — palette theming via `--bs-*` overrides in `web/vendor/theme.css` only.
-21. All UI text in **bahasa Indonesia baku (KBBI)**; the only external request is the sanctioned Google Fonts stylesheet (§2) — no other CDN assets; no quiz state lost on restart; no dependencies outside the closed list.
+21. Teks yang dirender memakai **bahasa Indonesia baku (KBBI)** per peta §1 (code identifiers tetap Inggris); the only external request is the sanctioned Google Fonts stylesheet (§2) — no other CDN assets; no quiz state lost on restart; Go modules stay within the closed list (§2) plus the registered vendored Chart.js asset.
 
 ---
 
 ## 12. Open Questions
 
-None — all 24 clarification decisions plus session strategy, persistence/mirror policy, UI language (bahasa Indonesia baku KBBI), palette (blue + controlled semantic), testing scope, and the library selection (SSE broker / .env loader / CSV+XLSX export, §2) are resolved in this document.
+1. Dependencies: vendored Chart.js v4.5.1 stays manually version-pinned (§2/§4) — Go scanners (`govulncheck`) do not cover it; revisit automated JS vuln-watch on upgrade.
+2. Schema: `users.aktif` lifecycle is specified (§5/§8/§10) — future account-lifecycle fields must repeat the login/session/history/ask-first treatment.
+3. Language: rendered-text KBBI is mapped + string-locked (§1); code identifiers stay English by design — any new user-facing literal needs a map entry + test row.
+4. Negative tests: `publish_guard_test.go` locks the close-quiz/stop + approve paths (§11.17); the remaining `Hub.Publish` sites rely on the shared write-then-broadcast order (§10) without per-site failure-injection.

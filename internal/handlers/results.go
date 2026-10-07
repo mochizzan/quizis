@@ -477,8 +477,8 @@ func (t *Teacher) ResultsAnalysisPage(c *echo.Context) error {
 
 // --- GET /teacher/quiz/:id/grading ------------------------------------
 
-// gradingRow is one essay answer awaiting (or holding) a score.
-type gradingRow struct {
+// gradingAnswer is one student's essay answer awaiting (or holding) a score.
+type gradingAnswer struct {
 	AnswerID uint64
 	Name     string
 	Text     string
@@ -486,8 +486,20 @@ type gradingRow struct {
 	Removed  bool
 }
 
-// GrantingPage lists the quiz's essay answers (is_correct IS NULL — essays
-// are never auto-graded). The page handler serves GET only — saves go to
+// gradingQuestion is one essay question of the quiz together with every
+// student's answer to it: the grading page renders one card per pertanyaan,
+// and a question nobody answered still gets its card (empty state).
+type gradingQuestion struct {
+	Seq     int
+	QID     uint64
+	Teks    string
+	Answers []gradingAnswer
+}
+
+// GrantingPage lists the quiz's essay questions grouped with their answers
+// (is_correct IS NULL — essays are never auto-graded): two queries (essay
+// questions by seq, then answers ordered by student name) grouped in Go by
+// question. The page handler serves GET only — saves go to
 // POST /teacher/quiz/:id/grading/:answerId.
 func (t *Teacher) GrantingPage(c *echo.Context) error {
 	id, rerr := monitorQuizID(c)
@@ -502,7 +514,32 @@ func (t *Teacher) GrantingPage(c *echo.Context) error {
 	if rerr != nil {
 		return fail(c, rerr.Status, rerr.Code, rerr.Msg)
 	}
-	rows, err := t.DB.QueryContext(ctx, `SELECT a.id, u.nama_lengkap, a.answer, a.score, p.status
+	// (1) the essay questions in seq order — the card shells
+	qRows, err := t.DB.QueryContext(ctx, `SELECT qq.seq, q.id, q.teks
+		FROM quiz_questions qq
+		JOIN questions q ON q.id = qq.question_id
+		WHERE qq.quiz_id = ? AND q.type = 'essay'
+		ORDER BY qq.seq`, quiz.ID)
+	if err != nil {
+		return err
+	}
+	defer qRows.Close()
+	var questions []gradingQuestion
+	byQID := map[uint64]int{}
+	for qRows.Next() {
+		var q gradingQuestion
+		if err := qRows.Scan(&q.Seq, &q.QID, &q.Teks); err != nil {
+			return err
+		}
+		byQID[q.QID] = len(questions)
+		questions = append(questions, q)
+	}
+	if err := qRows.Err(); err != nil {
+		return err
+	}
+	// (2) the answers awaiting grading, grouped onto the cards in Go —
+	// ordered by student name so every card lists the class the same way
+	rows, err := t.DB.QueryContext(ctx, `SELECT a.id, a.question_id, u.nama_lengkap, a.answer, a.score, p.status
 		FROM answers a
 		JOIN participants p ON p.id = a.participant_id
 		JOIN users u ON u.id = p.user_id
@@ -512,13 +549,19 @@ func (t *Teacher) GrantingPage(c *echo.Context) error {
 		return err
 	}
 	defer rows.Close()
-	var list []gradingRow
 	for rows.Next() {
-		var g gradingRow
+		var g gradingAnswer
+		var questionID uint64
 		var text sql.NullString
 		var status string
-		if err := rows.Scan(&g.AnswerID, &g.Name, &text, &g.Score, &status); err != nil {
+		if err := rows.Scan(&g.AnswerID, &questionID, &g.Name, &text, &g.Score, &status); err != nil {
 			return err
+		}
+		idx, ok := byQID[questionID]
+		if !ok {
+			// the question left the quiz after this answer was written —
+			// it no longer counts toward the score, so it has no card
+			continue
 		}
 		if text.Valid {
 			_ = json.Unmarshal([]byte(text.String), &g.Text)
@@ -527,25 +570,46 @@ func (t *Teacher) GrantingPage(c *echo.Context) error {
 			}
 		}
 		g.Removed = status == "dikeluarkan"
-		list = append(list, g)
+		questions[idx].Answers = append(questions[idx].Answers, g)
 	}
 	if err := rows.Err(); err != nil {
 		return err
 	}
 	return c.Render(http.StatusOK, "page-teacher-grading", map[string]any{
-		"Title":  "Penilaian — " + quiz.Judul,
-		"Judul":  quiz.Judul,
-		"ID":     quiz.ID,
-		"Rows":   list,
-		"Crumbs": QuizCrumbs(quiz.ID, quiz.Judul, "Penilaian"),
+		"Title":     "Penilaian — " + quiz.Judul,
+		"Judul":     quiz.Judul,
+		"ID":        quiz.ID,
+		"Questions": questions,
+		"Crumbs":    QuizCrumbs(quiz.ID, quiz.Judul, "Penilaian"),
 	})
+}
+
+// EssayScore is the essay contribution to the 100-point final (spec §6.7):
+// the sum of the participant's graded essay scores divided by the quiz's
+// FULL question count, rounded half-up to two decimals with integer
+// arithmetic — the same rounding quizengine.CentiPercent uses, so an essay
+// graded 100 contributes exactly CentiPercent(1, total) (one correct MCQ's
+// weight) and every save adds exactly score/total. A non-positive total
+// is 0 (never NaN).
+func EssayScore(sum float64, total int) float64 {
+	if total <= 0 {
+		return 0
+	}
+	// stored scores are 2dp — snap the float sum back to whole centi points
+	// so the half-up division never accumulates float error
+	centiSum := int(sum*100 + 0.5)
+	centi := (2*centiSum + total) / (2 * total)
+	return float64(centi) / 100
 }
 
 // GradeAnswer is POST /teacher/quiz/:id/grading/:answerId {score} (0–100
 // per essay): stores the score (is_correct stays NULL — an essay is never
 // correct/incorrect by rule), then recomputes participants.essay_score as
-// the mean of graded essays scaled to the essay share of the exam, and
-// final_score = score_auto + essay_score (spec §6.7, §6.11). Idempotent.
+// SUM(graded essay scores)/total questions (each save adds exactly
+// score/total) and final_score = FinalScore(score_auto, essay_score) ONLY
+// once every essay answer of this quiz carries a score — until then
+// final_score stays NULL so results keep showing "Menunggu penilaian" and
+// the student sees "Pending" (spec §6.7, §6.11). Idempotent.
 func (t *Teacher) GradeAnswer(c *echo.Context) error {
 	id, rerr := monitorQuizID(c)
 	if rerr != nil {
@@ -624,17 +688,13 @@ func (t *Teacher) GradeAnswer(c *echo.Context) error {
 		return err
 	}
 
-	// recompute the essay share for this participant: mean of the graded
-	// essays × essay count / total questions (FinalScore adds it)
+	// recompute the essay share for this participant: SUM(graded scores)/
+	// total questions — each save adds exactly score/total, ungraded essays
+	// contribute 0 — and hold final_score at NULL while any essay answer of
+	// this quiz is still ungraded, so results stay "awaiting grading" and
+	// the student's score stays "Pending" (FinalScore's pending semantics).
 	total, _, hasEssay, err := quizScope(ctx, tx, quiz.ID)
 	if err != nil {
-		tx.Rollback()
-		return err
-	}
-	var nEssay int
-	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM quiz_questions qq
-		JOIN questions q ON q.id = qq.question_id
-		WHERE qq.quiz_id = ? AND q.type = 'essay'`, quiz.ID).Scan(&nEssay); err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -647,21 +707,30 @@ func (t *Teacher) GradeAnswer(c *echo.Context) error {
 	}
 	var essayScore any
 	var final any
-	if hasEssay && nEssay > 0 && total > 0 {
-		var mean sql.NullFloat64
-		if err := tx.QueryRowContext(ctx, `SELECT AVG(score) FROM answers
+	if hasEssay && total > 0 {
+		var sum float64
+		if err := tx.QueryRowContext(ctx, `SELECT COALESCE(SUM(score),0) FROM answers
 			WHERE participant_id = ? AND score IS NOT NULL`, participantID).
-			Scan(&mean); err != nil {
+			Scan(&sum); err != nil {
 			tx.Rollback()
 			return err
 		}
-		if mean.Valid {
-			v := mean.Float64 * float64(nEssay) / float64(total)
-			v = float64(int(v*100+0.5)) / 100
-			essayScore = v
-			if auto.Valid {
-				final = quizengine.FinalScore(&auto.Float64, &v, true)
-			}
+		// every essay of this quiz must hold a score before the final may
+		// be computed (an unanswered essay has no answers row at all and
+		// does not block — it simply contributes 0 to the SUM)
+		var ungraded int
+		if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM answers a
+			JOIN quiz_questions qq ON qq.quiz_id = ? AND qq.question_id = a.question_id
+			JOIN questions q ON q.id = qq.question_id
+			WHERE a.participant_id = ? AND q.type = 'essay' AND a.score IS NULL`,
+			quiz.ID, participantID).Scan(&ungraded); err != nil {
+			tx.Rollback()
+			return err
+		}
+		v := EssayScore(sum, total)
+		essayScore = v
+		if ungraded == 0 && auto.Valid {
+			final = quizengine.FinalScore(&auto.Float64, &v, true)
 		}
 	}
 	if _, err := tx.ExecContext(ctx,

@@ -34,8 +34,8 @@ const (
 	MsgPasswordMismatch = "Kata sandi tidak sama."
 	MsgForgotSent       = "Permintaan dikirim. Guru Anda akan meninjaunya."
 	MsgRegistered       = "Akun dibuat. Masuk untuk melanjutkan."
-	// MsgLoginInactive is only reachable AFTER the password matched (or the
-	// forced-change flag skipped it): a stranger still sees MsgLoginFailed.
+	// MsgLoginInactive is only reachable AFTER the password matched: a
+	// stranger still sees MsgLoginFailed.
 	MsgLoginInactive = "Akun ini dinonaktifkan. Hubungi guru Anda."
 )
 
@@ -68,8 +68,8 @@ func loginData(identity, errMsg string) map[string]any {
 // --- POST /login ----------------------------------------------------------
 // One form for both roles: username OR email + password. The guru account
 // comes from .env (user_id 0, role "guru"); students come from the users
-// table. must_change_pw=1 skips password verification entirely and lands on
-// /change-password.
+// table. must_change_pw=1 still lands on /change-password, but only after
+// the password (the guru-issued temporary one) verifies.
 func (a *Auth) Login(c *echo.Context) error {
 	identity := strings.TrimSpace(c.FormValue("identity"))
 	password := c.FormValue("password")
@@ -105,7 +105,7 @@ func (a *Auth) Login(c *echo.Context) error {
 		return err
 	}
 
-	if !must && bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) != nil {
+	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) != nil {
 		return c.Render(http.StatusUnauthorized, "page-login", loginData(identity, MsgLoginFailed))
 	}
 	// deactivated accounts cannot sign in — checked only once the password

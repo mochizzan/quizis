@@ -531,22 +531,48 @@ func TestApproveResetForcesPasswordChangeAndRevokesSessions(t *testing.T) {
 	id := pendingID(t, ts)
 	guru := guruLogin(t, ts)
 
+	// missing temp password → 400 VALIDATION
 	resp, body := postForm(t, ts.URL+"/teacher/password-resets/"+id+"/approve", url.Values{}, guru)
+	if resp.StatusCode != http.StatusBadRequest || !strings.Contains(body, "VALIDATION") {
+		t.Fatalf("missing temp approve = %d %q, want 400 VALIDATION", resp.StatusCode, body)
+	}
+	// short temp password → 400
+	resp, body = postForm(t, ts.URL+"/teacher/password-resets/"+id+"/approve",
+		url.Values{"temp_password": {"short"}}, guru)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("short temp approve = %d %q, want 400", resp.StatusCode, body)
+	}
+
+	resp, body = postForm(t, ts.URL+"/teacher/password-resets/"+id+"/approve",
+		url.Values{"temp_password": {"Temp1234"}}, guru)
 	if resp.StatusCode != http.StatusOK || !strings.Contains(body, `"ok":true`) {
 		t.Fatalf("approve = %d %q, want 200 ok", resp.StatusCode, body)
 	}
 
 	// double approve → 409 CONFLICT (idempotent guard)
-	resp, body = postForm(t, ts.URL+"/teacher/password-resets/"+id+"/approve", url.Values{}, guru)
+	resp, body = postForm(t, ts.URL+"/teacher/password-resets/"+id+"/approve",
+		url.Values{"temp_password": {"Temp1234"}}, guru)
 	if resp.StatusCode != http.StatusConflict || !strings.Contains(body, "CONFLICT") {
 		t.Fatalf("double approve = %d %q, want 409 CONFLICT", resp.StatusCode, body)
 	}
 
-	// next login SKIPS password verification (even a wrong one) → /change-password
+	// the pre-approve session is revoked by the approval itself
+	if _, body := do(t, ts.URL+"/me", c1.Value); body != "anon" {
+		t.Errorf("pre-approve session survived approval: /me = %q", body)
+	}
+
+	// wrong temp password → 401 (verification is never skipped)
 	resp, _ = postForm(t, ts.URL+"/login",
 		url.Values{"identity": {"tari"}, "password": {"totally-wrong"}})
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("wrong-temp login = %d, want 401", resp.StatusCode)
+	}
+
+	// correct temp password → /change-password
+	resp, _ = postForm(t, ts.URL+"/login",
+		url.Values{"identity": {"tari"}, "password": {"Temp1234"}})
 	if resp.StatusCode != http.StatusFound || resp.Header.Get("Location") != "/change-password" {
-		t.Fatalf("skip-password login = %d %q, want 302 /change-password",
+		t.Fatalf("temp login = %d %q, want 302 /change-password",
 			resp.StatusCode, resp.Header.Get("Location"))
 	}
 	c2 := sessionCookie(resp)
@@ -590,6 +616,38 @@ func TestApproveResetForcesPasswordChangeAndRevokesSessions(t *testing.T) {
 	}
 }
 
+func TestApproveResetKillsWarmSessions(t *testing.T) {
+	ts, _ := authFixture(t)
+	nama := "Sinta Test"
+	c1 := registerUser(t, ts, "sinta", "sinta@example.test", nama, "warmold12")
+	if _, body := do(t, ts.URL+"/me", c1.Value); !strings.HasSuffix(body, ":murid") {
+		t.Fatalf("warm session /me = %q, want authenticated murid", body)
+	}
+
+	postForm(t, ts.URL+"/forgot-password", url.Values{"identity": {"sinta"}, "nama": {nama}})
+	id := pendingID(t, ts)
+	guru := guruLogin(t, ts)
+
+	resp, body := postForm(t, ts.URL+"/teacher/password-resets/"+id+"/approve",
+		url.Values{"temp_password": {"Temp1234"}}, guru)
+	if resp.StatusCode != http.StatusOK || !strings.Contains(body, `"ok":true`) {
+		t.Fatalf("approve = %d %q, want 200 ok", resp.StatusCode, body)
+	}
+
+	// the warm pre-approve cookie is dead on the next request
+	if _, body := do(t, ts.URL+"/me", c1.Value); body != "anon" {
+		t.Errorf("warm session survived approval: /me = %q", body)
+	}
+
+	// temp-password login works and lands on /change-password
+	resp, _ = postForm(t, ts.URL+"/login",
+		url.Values{"identity": {"sinta"}, "password": {"Temp1234"}})
+	if resp.StatusCode != http.StatusFound || resp.Header.Get("Location") != "/change-password" {
+		t.Errorf("temp login = %d %q, want 302 /change-password",
+			resp.StatusCode, resp.Header.Get("Location"))
+	}
+}
+
 func TestRejectResetKeepsPasswordValidation(t *testing.T) {
 	ts, _ := authFixture(t)
 	nama := "Dodi Test"
@@ -605,7 +663,8 @@ func TestRejectResetKeepsPasswordValidation(t *testing.T) {
 	}
 
 	// a rejected request can no longer be approved
-	resp, body = postForm(t, ts.URL+"/teacher/password-resets/"+id+"/approve", url.Values{}, guru)
+	resp, body = postForm(t, ts.URL+"/teacher/password-resets/"+id+"/approve",
+		url.Values{"temp_password": {"Temp1234"}}, guru)
 	if resp.StatusCode != http.StatusConflict || !strings.Contains(body, "CONFLICT") {
 		t.Fatalf("approve after reject = %d %q, want 409 CONFLICT", resp.StatusCode, body)
 	}

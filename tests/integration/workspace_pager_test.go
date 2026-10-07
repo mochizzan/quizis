@@ -31,11 +31,12 @@ func pagerWindow(body, needle string) string {
 
 // TestWorkspacePagerStaticContract pins the static half of the
 // one-question-per-page workspace in review mode: the SSR markup hides
-// every non-current question section, the prev/next pager exists with its
-// boundary states (disabled with the Bootstrap disabled class — never
-// hidden — so the bound stays discoverable), and every question's answer
-// inputs are still in the response. Click transitions are JS; their code
-// path is reviewed against workspace.js render()/jumpTo().
+// every non-current question section, the per_soal pager carries the
+// forward-only contract (prev SSR-hidden per C9 — the button still ships
+// in the markup — next visible with its boundary states disabled via the
+// Bootstrap disabled class so the bound stays discoverable), and every
+// question's answer inputs are still in the response. Click transitions
+// are JS; their code path is reviewed against workspace.js render()/jumpTo().
 func TestWorkspacePagerStaticContract(t *testing.T) {
 	ts, pool, _, _ := quizFixture(t)
 	ck := guruLogin(t, ts)
@@ -69,14 +70,14 @@ func TestWorkspacePagerStaticContract(t *testing.T) {
 		}
 	}
 
-	// --- Q1: only Q1 visible; prev disabled, next enabled
+	// --- Q1: only Q1 visible; prev disabled+hidden, next enabled
 	body := page()
 	if !contains(body, `id="btn-prev"`) || !contains(body, `id="btn-next"`) {
 		t.Fatalf("pager controls missing (prev %v / next %v)",
 			contains(body, `id="btn-prev"`), contains(body, `id="btn-next"`))
 	}
-	if !contains(body, `id="btn-prev" class="btn btn-outline-secondary disabled" disabled title="Sebelumnya"`) {
-		t.Fatalf("prev not disabled on the first question: %s", pagerWindow(body, `id="btn-prev"`))
+	if !contains(body, `id="btn-prev" class="btn btn-outline-secondary disabled" hidden disabled title="Sebelumnya"`) {
+		t.Fatalf("prev not disabled+hidden on the first question: %s", pagerWindow(body, `id="btn-prev"`))
 	}
 	if !contains(body, `id="btn-next" class="btn btn-outline-secondary" title="Berikutnya"`) {
 		t.Fatalf("next not enabled on the first question: %s", pagerWindow(body, `id="btn-next"`))
@@ -101,10 +102,11 @@ func TestWorkspacePagerStaticContract(t *testing.T) {
 		}
 	}
 
-	// --- Q2 (middle): both buttons enabled, only Q2 visible
+	// --- Q2 (middle): next enabled with no disabled bound, prev hidden
+	// (per_soal), only Q2 visible
 	advance(1)
 	body = page()
-	if !contains(body, `id="btn-prev" class="btn btn-outline-secondary" title="Sebelumnya"`) ||
+	if !contains(body, `id="btn-prev" class="btn btn-outline-secondary" hidden title="Sebelumnya"`) ||
 		!contains(body, `id="btn-next" class="btn btn-outline-secondary" title="Berikutnya"`) {
 		t.Fatalf("middle pager not fully enabled:\nprev: %s\nnext: %s",
 			pagerWindow(body, `id="btn-prev"`), pagerWindow(body, `id="btn-next"`))
@@ -125,14 +127,14 @@ func TestWorkspacePagerStaticContract(t *testing.T) {
 		}
 	}
 
-	// --- Q3 (last): next disabled, prev enabled, only Q3 visible
+	// --- Q3 (last): next disabled, prev hidden (per_soal), only Q3 visible
 	advance(2)
 	body = page()
 	if !contains(body, `id="btn-next" class="btn btn-outline-secondary disabled" disabled title="Berikutnya"`) {
 		t.Fatalf("next not disabled on the last question: %s", pagerWindow(body, `id="btn-next"`))
 	}
-	if !contains(body, `id="btn-prev" class="btn btn-outline-secondary" title="Sebelumnya"`) {
-		t.Fatalf("prev not enabled on the last question: %s", pagerWindow(body, `id="btn-prev"`))
+	if !contains(body, `id="btn-prev" class="btn btn-outline-secondary" hidden title="Sebelumnya"`) {
+		t.Fatalf("prev not hidden on the last question: %s", pagerWindow(body, `id="btn-prev"`))
 	}
 	if !contains(body, `data-index="2" data-type="pg">`) {
 		t.Fatalf("last question not visible in markup: %s", pagerWindow(body, `data-index="2"`))

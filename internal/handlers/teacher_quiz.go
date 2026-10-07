@@ -66,6 +66,19 @@ func withChip(r *quizRow) {
 	r.StatusLabel, r.Chip = quizChip(r.Status)
 }
 
+// quizTimerLabel maps timer_type → Indonesian label (matches
+// views/teacher/quiz_list.html timer column).
+func quizTimerLabel(timerType string) string {
+	switch timerType {
+	case "global":
+		return "Global"
+	case "tanpa_timer":
+		return "Tanpa timer"
+	default:
+		return "Per pertanyaan"
+	}
+}
+
 // participantRow is one roster/results line.
 type participantRow struct {
 	ID        uint64

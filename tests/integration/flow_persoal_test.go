@@ -309,17 +309,15 @@ func TestNextNavigationAndFreeModeGuard(t *testing.T) {
 		t.Fatalf("next = %+v", nd)
 	}
 
-	// jump back → current_q 1 (persisted server-side)
+	// per_soal is forward-only: jumping back → 409, current_q stays 2
 	resp, body = postJSON(t, ts.URL+"/quiz/"+code+"/next",
 		map[string]any{"question_id": q1}, st)
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("jump = %d: %s", resp.StatusCode, body)
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("jump = %d, want 409: %s", resp.StatusCode, body)
 	}
-	if err := json.Unmarshal(decodeEnv(t, body).Data, &nd); err != nil {
-		t.Fatalf("jump data: %v", err)
-	}
-	if nd.CurrentQ != 1 {
-		t.Fatalf("jump current_q = %d, want 1", nd.CurrentQ)
+	if env := decodeEnv(t, body); env.Error != "CONFLICT" ||
+		env.Message != "Pertanyaan sebelumnya tidak dapat dibuka kembali." {
+		t.Fatalf("jump envelope = %s", body)
 	}
 	quizID := func() uint64 {
 		var id uint64
@@ -333,8 +331,8 @@ func TestNextNavigationAndFreeModeGuard(t *testing.T) {
 	if err := pool.QueryRow(`SELECT current_q FROM participants WHERE id = ?`, pid).Scan(&storedCurrent); err != nil {
 		t.Fatalf("current_q: %v", err)
 	}
-	if storedCurrent != 1 {
-		t.Fatalf("stored current_q = %d, want 1", storedCurrent)
+	if storedCurrent != 2 {
+		t.Fatalf("stored current_q = %d, want 2 (backward jump must not persist)", storedCurrent)
 	}
 
 	// linear quiz → /next refuses (no free navigation)

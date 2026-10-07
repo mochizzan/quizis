@@ -9,6 +9,10 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v5"
+	"golang.org/x/crypto/bcrypt"
+
+	mw "quiz/internal/middleware"
+	"quiz/internal/quizengine"
 )
 
 type resetRow struct {
@@ -69,14 +73,36 @@ func (a *Auth) PasswordResetsPage(c *echo.Context) error {
 }
 
 // --- POST /teacher/password-resets/:id/approve ----------------------------
-// Idempotent: only a pending row flips to disetujui (0 rows → 409), and the
-// user's must_change_pw=1 is set in the same transaction.
+// Idempotent: only a pending row flips to disetujui (0 rows → 409). The guru
+// supplies a policy-checked temporary password: the user's password_hash is
+// replaced and must_change_pw=1 is set in the same transaction, and every
+// pre-existing session is revoked after commit so the mirror never serves a
+// stale must_change_pw snapshot.
 func (a *Auth) ApproveReset(c *echo.Context) error {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		return fail(c, http.StatusBadRequest, ErrValidation, "ID permintaan tidak valid.")
 	}
 	ctx := c.Request().Context()
+
+	temp := strings.TrimSpace(c.FormValue("temp_password"))
+	if temp == "" {
+		var body struct {
+			TempPassword string `json:"temp_password"`
+		}
+		if rerr := decodeJSON(c, &body); rerr != nil {
+			return fail(c, rerr.Status, rerr.Code, rerr.Msg)
+		}
+		temp = strings.TrimSpace(body.TempPassword)
+	}
+	if !quizengine.PasswordMeetsPolicy(temp) {
+		return fail(c, http.StatusBadRequest, ErrValidation, "Kata sandi sementara minimal 8 karakter.")
+	}
+	// CPU-costly hash must never hold the tx open.
+	hash, err := bcrypt.GenerateFromPassword([]byte(temp), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
 
 	tx, err := a.DB.BeginTx(ctx, nil)
 	if err != nil {
@@ -99,11 +125,14 @@ func (a *Auth) ApproveReset(c *echo.Context) error {
 		return err
 	}
 	if _, err := tx.ExecContext(ctx,
-		`UPDATE users SET must_change_pw = 1 WHERE id = ?`, userID); err != nil {
+		`UPDATE users SET password_hash = ?, must_change_pw = 1 WHERE id = ?`, string(hash), userID); err != nil {
 		tx.Rollback()
 		return err
 	}
 	if err := tx.Commit(); err != nil {
+		return err
+	}
+	if err := mw.RevokeUserSessions(ctx, a.DB, a.Store, userID); err != nil {
 		return err
 	}
 	return ok(c, nil)

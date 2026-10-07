@@ -5,8 +5,8 @@
     <div>
       <h1 class="h4 mb-1">{{.Judul}}</h1>
       <p class="text-body-secondary small mb-0">
-        Kode gabung <code>{{.Code}}</code> &middot; {{.TimerType}} timer
-        &middot; status <span class="border rounded px-2">{{.Status}}</span>
+        Kode gabung <code>{{.Code}}</code> &middot; {{.TimerLabel}}
+        &middot; status <span class="border rounded px-2">{{.StatusLabel}}</span>
       </p>
     </div>
     <div id="monitor-clock" class="text-end" data-ends="{{.EndsUnix}}" data-now="{{.ServerNow}}"{{if not .TimerOn}} hidden{{end}}>
@@ -50,11 +50,11 @@
             <strong>{{.Name}}</strong>
             <span class="d-flex gap-1 align-items-center">
               {{if .Cheating}}<span class="badge text-bg-danger">Ditandai</span>{{else if gt .Violations 0}}<span class="badge text-bg-danger">{{.Violations}} pelanggaran</span>{{end}}
-              <span class="badge text-bg-secondary">{{.Status}}</span>
+              <span class="badge text-bg-secondary">{{.StatusLabel}}</span>
             </span>
           </div>
           <div class="small text-body-secondary">
-            {{if eq .Page "preview"}}Pratinjau{{else if gt .CurrentQ 0}}Pertanyaan {{.CurrentQ}}{{end}}{{if or (eq .Page "preview") (gt .CurrentQ 0)}} &middot; {{end}}
+            {{if eq .Page "preview"}}Pratinjau{{else if gt .CurrentQ 0}}Pertanyaan {{.CurrentQ}}{{if .CurrentQTeks}} — {{.CurrentQTeks}}{{end}}{{end}}{{if or (eq .Page "preview") (gt .CurrentQ 0)}} &middot; {{end}}
             {{if .Connected}}tersambung{{else}}tidak tersambung{{end}}{{if and .Cheating .Violations}} &middot; <span class="text-danger">{{.Violations}} pelanggaran</span>{{end}}
           </div>
           {{if and (eq $.TimerType "per_soal") .Spent}}
@@ -62,7 +62,7 @@
             {{range .Spent}}<span class="me-1">Pertanyaan {{.Q}}: {{.Sec}} dtk</span>{{end}}
           </div>
           {{end}}
-          {{if .Answer}}<div class="small" data-answer-line>{{if .AnswerQPos}}jawaban pertanyaan {{.AnswerQPos}}: {{.AnswerText}}{{else}}jawaban: {{.AnswerText}}{{end}}</div>{{end}}
+          {{if .Answer}}<div class="small" data-answer-line>{{if and .AnswerQPos .AnswerTeks}}jawaban pertanyaan {{.AnswerQPos}} · {{.AnswerTeks}}: {{.AnswerText}}{{else if .AnswerQPos}}jawaban pertanyaan {{.AnswerQPos}}: {{.AnswerText}}{{else}}jawaban: {{.AnswerText}}{{end}}</div>{{end}}
           {{if .ScoreText}}<div class="fw-semibold">{{.ScoreText}}</div>{{end}}
           {{if or .Cheating (gt .Violations 0)}}
           <div class="mt-2 d-flex gap-1">
@@ -77,7 +77,8 @@
     </div>
   </section>
 
-  <section>
+  {{if .RankingLive}}
+  <section id="monitor-rank-section">
     <h2 class="h5"><i class="bi bi-trophy me-2" aria-hidden="true"></i>Peringkat langsung</h2>
     <ol class="list-group list-group-numbered" id="monitor-rank">
       {{range .Ranking}}
@@ -89,6 +90,7 @@
       {{if not .Ranking}}<li class="list-group-item text-body-secondary">Peringkat muncul setelah jawaban masuk (jika ranking_live aktif).</li>{{end}}
     </ol>
   </section>
+  {{end}}
 
 </div>
 

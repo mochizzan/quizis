@@ -75,12 +75,15 @@
     });
     // Heartbeat carries the server clock ({server_now}) — re-sync the
     // countdown every beat so client drift cannot stretch or shrink the
-    // attempt (spec §6.6 "resynced on every heartbeat").
+    // attempt (spec §6.6 "resynced on every heartbeat"). The skew update
+    // feeds serverNow() — the per-question countdown reads it too (C9).
     es.addEventListener("ping", function (ev) {
-      if (!ev.data || !timer) return;
+      if (!ev.data) return;
       try {
         var d = frameData(ev);
-        if (d && d.server_now && blob && blob.ends_at > 0) {
+        if (!d || !d.server_now) return;
+        skew = d.server_now * 1000 - Date.now();
+        if (blob && blob.ends_at > 0) {
           deadline = Date.now() + (blob.ends_at - d.server_now) * 1000;
         }
       } catch (e) { /* keep the current deadline */ }
@@ -92,6 +95,18 @@
   if (tag) {
     try { blob = JSON.parse(tag.textContent); } catch (e) { blob = null; }
   }
+
+  // ---- state shared by render() and the timer (C8/C9) --------------------
+  // IIFE scope: render() runs at boot and must see initialized values no
+  // matter which init path ran first.
+  var previewOpen = false;  // pre-submit review open — pager stays hidden
+  var perQ = false;         // per_soal with a per-question budget (C9)
+  var qSince = 0;           // unix seconds the current question's budget started
+  var timeupHandled = 0;    // position already handled by the expiry path
+  // server clock − client clock (ms), seeded from the blob and re-synced on
+  // every SSE ping (same skew pattern the attempt deadline uses)
+  var skew = blob && blob.server_now ? blob.server_now * 1000 - Date.now() : 0;
+  function serverNow() { return Date.now() + skew; }
 
   // ---- ready state: start form ------------------------------------------
   var startForm = document.getElementById("start-form");
@@ -110,14 +125,33 @@
   var deadline = 0;
 
   function startTimer() {
-    if (!blob || !blob.timer_on || !(blob.ends_at > 0)) return;
+    // perQ (per_soal) shows THIS question's budget; the attempt-level cap
+    // below keeps running in every mode (C9 — hard-cap finish stays)
+    if (!blob || !(perQ || (blob.timer_on && blob.ends_at > 0))) return;
     timer = document.getElementById("timer");
     if (timer) timer.classList.remove("d-none");
-    deadline = Date.now() + (blob.ends_at - blob.server_now) * 1000;
+    deadline = blob.ends_at > 0
+      ? Date.now() + (blob.ends_at - blob.server_now) * 1000 : 0;
     var value = document.getElementById("timer-value");
     var tick = function () {
+      // attempt-level hard cap: wall clock reached ends_at → close the attempt
+      if (deadline > 0 && Date.now() >= deadline) {
+        if (value) value.textContent = "00:00";
+        finishAttempt();
+        return;
+      }
       var rem = deadline - Date.now();
-      if (rem <= 0) {
+      if (perQ) {
+        // per-question countdown: per_question_seconds − (serverNow() − q_since)
+        rem = Number(blob.per_question_seconds) * 1000 -
+          (serverNow() - qSince * 1000);
+        if (rem <= 0) {
+          if (value) value.textContent = "00:00";
+          handleTimeup(); // latched per question position — never spins
+          setTimeout(tick, 250);
+          return;
+        }
+      } else if (rem <= 0) {
         if (value) value.textContent = "00:00";
         finishAttempt(); // wall clock reached — close the attempt
         return;
@@ -142,13 +176,21 @@
       if (body.ok) { leaving = true; location.reload(); return; }
       finishing = false;
       showErr(body.message);
-    }).catch(function () { finishing = false; });
+    }).catch(function () {
+      finishing = false;
+      showErr(); // network failure — never swallow the submit silently
+    });
   }
 
   if (state !== "started" || !blob) return;
 
   // ---- started state -----------------------------------------------------
   var linear = !!blob.linear;
+  // per_soal with a per-question budget (tanpa_timer carries 0 → free nav)
+  perQ = !linear && Number(blob.per_question_seconds || 0) > 0;
+  // resumes the per-question countdown from the SSR blob; a missing q_since
+  // (row predates the column) starts a full budget instead of instant expiry
+  qSince = Number(blob.q_since || 0) || Math.floor(serverNow() / 1000);
   var total = blob.total;
   var current = blob.current;
   var busy = false;
@@ -184,9 +226,11 @@
     // pager stays present (disabled only at the START bound, so the layout
     // does not jump) — SSR pins the last-question disabled class as the
     // static contract, but at runtime "Next" on the final question is the
-    // entry into the pre-submit review, so it must stay clickable.
-    if (next) { next.hidden = linear; setDisabled(next, false); }
-    if (prev) { prev.hidden = linear; setDisabled(prev, current <= 1); }
+    // entry into the pre-submit review, so it must stay clickable. The
+    // pre-submit preview owns the view while open, and per_soal (perQ)
+    // navigation is forward-only (C8/C9).
+    if (next) { next.hidden = linear || previewOpen; setDisabled(next, false); }
+    if (prev) { prev.hidden = linear || previewOpen || perQ; setDisabled(prev, current <= 1); }
   }
 
   // ---- answered bookkeeping: the preview grid reads it --------------------
@@ -422,10 +466,85 @@
         showPreview(cardAt(current), resp.data.preview);
       }
       current = resp.data.current_q;
+      // the advance landed: restart the per-question budget from the
+      // server's new current_q_since and re-arm the expiry guard for the
+      // new position (C9)
+      var since = Number((resp.data && resp.data.current_q_since) ||
+        resp.current_q_since || 0);
+      // /next always stamps current_q_since = NOW server-side — without the
+      // field in the response, restart the budget from the synced clock
+      qSince = since > 0 ? since : Math.floor(serverNow() / 1000);
+      timeupHandled = 0;
       render();
       var el = cardAt(current);
       if (el) el.scrollIntoView({ block: "nearest" });
     }).catch(function () { busy = false; showErr("Tidak dapat berpindah."); });
+  }
+
+  // ---- per-question expiry (C9) ------------------------------------------
+  // Shown once when the current question's budget runs out on an unanswered
+  // question; hidden again with the new question — Bootstrap modal only.
+  function showTimeup() {
+    var m = document.getElementById("timeup-modal");
+    if (!m || !window.bootstrap) return;
+    bootstrap.Modal.getOrCreateInstance(m).show();
+  }
+  function hideTimeup() {
+    var m = document.getElementById("timeup-modal");
+    if (!m || !window.bootstrap) return;
+    bootstrap.Modal.getOrCreateInstance(m).hide();
+  }
+
+  // One action per question position: timeupHandled latches to the position
+  // the moment an action starts and resets only when an advance lands, so a
+  // stalled POST or the last question can never spin this path. A busy
+  // navigation/save defers the action (unlatched) to the next tick instead
+  // of dropping it. Only an ACTUALLY expired budget may act: the boot path
+  // runs this on every refresh too, and a refresh while time remains must
+  // never advance (C9); an attempt-level finish already in flight outranks
+  // the per-question expiry.
+  function handleTimeup() {
+    if (!perQ || busy || finishing || timeupHandled === current) return;
+    var rem = Number(blob.per_question_seconds) * 1000 -
+      (serverNow() - qSince * 1000);
+    if (rem > 0) return;
+    timeupHandled = current;
+    var card = cardAt(current);
+    var qid = card ? parseInt(card.getAttribute("data-qid"), 10) : 0;
+    var hasAnswer = !!((qid && answered[qid]) || (card && readPayload(card)));
+    if (!hasAnswer) showTimeup(); // modal hides again with the new question
+    timeupAdvance();
+  }
+
+  // advance through the same POST /next path jumpTo(current+1, 0) takes
+  function timeupAdvance() {
+    busy = true;
+    post(blob.next_url, {}).then(function (resp) {
+      busy = false;
+      if (!resp.ok) { showErr(resp.message); return; } // no silent error (C9)
+      var data = resp.data || {};
+      var pos = Number(data.current_q || 0);
+      if (!(pos > 0)) {
+        showErr("Tidak dapat berpindah ke pertanyaan berikutnya.");
+        return;
+      }
+      hideTimeup();
+      if (pos === current) {
+        // last question: the server clamps target == pos — review instead
+        openPreview();
+        return;
+      }
+      current = pos;
+      var since = Number(data.current_q_since || resp.current_q_since || 0);
+      qSince = since > 0 ? since : Math.floor(serverNow() / 1000);
+      timeupHandled = 0; // advance landed — re-arm for the new position
+      render();
+      var el = cardAt(current);
+      if (el) el.scrollIntoView({ block: "nearest" });
+    }).catch(function () {
+      busy = false;
+      showErr("Tidak dapat berpindah ke pertanyaan berikutnya.");
+    });
   }
 
   var nextBtn = document.getElementById("btn-next");
@@ -462,14 +581,17 @@
   }
 
   // ---- pre-submit preview (spec §6.7) ------------------------------------
-  var previewOpen = false;
+  // previewOpen itself is module state (see the top of the IIFE — render()
+  // reads it at boot, C8).
   var autoPreviewed = false;
 
   function beacon(page) {
     // best-effort monitor beacon: the review is a client-side view, so the
     // live monitor only learns about it through this report (never toast —
     // a closed quiz must not interrupt the student)
-    post(blob.page_url, { page: page }).catch(function () {});
+    post(blob.page_url, { page: page }).catch(function (e) {
+      console.warn("page beacon failed:", e); // log only — never toast
+    });
   }
 
   function previewParts() {
@@ -538,13 +660,24 @@
         ? ev.target.closest("[data-preview-q]") : null;
       if (!box || linear) return;
       var qid = parseInt(box.getAttribute("data-preview-q"), 10);
-      closePreview();
+      var target = null;
       for (var i = 0; i < cards.length; i++) {
         if (parseInt(cards[i].getAttribute("data-qid"), 10) === qid) {
-          jumpTo(parseInt(cards[i].getAttribute("data-index"), 10) + 1, qid);
-          return;
+          target = cards[i];
+          break;
         }
       }
+      var targetPos = target
+        ? parseInt(target.getAttribute("data-index"), 10) + 1 : 0;
+      if (perQ && targetPos && targetPos < current) {
+        // forward-only in per_soal (C9): no POST — the server 409s too (C7)
+        if (window.quizToast) {
+          quizToast("info", "Pertanyaan sebelumnya tidak dapat dibuka kembali.");
+        }
+        return; // stay in the review grid
+      }
+      closePreview();
+      if (targetPos) jumpTo(targetPos, qid);
     });
   }
 
@@ -568,7 +701,7 @@
       }
       flushEssays(); // last keystrokes reach the server before /finish
       quizConfirm(
-        "Kirim kuis sekarang? Percobaan ini akan diakhiri dan jawaban Anda tidak dapat diubah.",
+        "Kirim kuis sekarang? Kuis ini akan diakhiri dan jawaban Anda tidak dapat diubah.",
         finishAttempt);
     });
   }
@@ -663,7 +796,7 @@
       return;
     }
     quizConfirm(
-      "Anda masih mengerjakan kuis ini. Tinggalkan halaman? Percobaan tetap terbuka dan Anda dapat kembali lagi.",
+      "Anda masih mengerjakan kuis ini. Tinggalkan halaman? Kuis tetap terbuka dan Anda dapat kembali lagi.",
       function () {
         leaving = true;
         location.href = url.href;
@@ -673,4 +806,7 @@
   // ---- boot --------------------------------------------------------------
   render();
   startTimer();
+  // refresh mid-question: the SSR blob's q_since may already be spent —
+  // run the expiry check on boot too (same one-action-per-position guard)
+  if (perQ) handleTimeup();
 })();
